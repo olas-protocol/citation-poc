@@ -1,66 +1,54 @@
-## Foundry
+# citation-poc
+This project contains the smart contracts and related scripts for the Proof of Concept (PoC) of the Olas Citation System.
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Project Setup
 
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
+ Install Project Dependencies:
 
 ```shell
-$ forge build
+nvm use 16.14.0
 ```
 
-### Test
-
 ```shell
-$ forge test
+npm install
 ```
 
-### Format
+Install VSCode extensions - NomicFoundation.hardhat-solidity
 
-```shell
-$ forge fmt
+Setup VScode to use correct formatting
+    - Create `settings.json` inside `.vscode` folder and add following
+```
+{
+    "[solidity]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
+    },
+    "[javascript]": {
+        "editor.formatOnSave": true,
+    },
+}
 ```
 
-### Gas Snapshots
+## Building and Testing with Forge
+This project uses Foundry, for building and testing smart contracts. 
+
+### Building
 
 ```shell
-$ forge snapshot
+forge build
 ```
 
-### Anvil
+### Testing
 
 ```shell
-$ anvil
+forge test
 ```
 
-### Deploy
+## Hardhat
+This project uses Hardhat, for helper tasks.
+
+### Running tasks
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+npx hardhat <task-name>
 ```
