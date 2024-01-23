@@ -17,5 +17,11 @@
     "@nomicfoundation/hardhat-foundry": "^1.1.1",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "hardhat": "^2.19.4"
+  },
+  "dependencies": {
+    "@ethereum-attestation-service/eas-sdk": "^1.4.0",
+    "colors": "^1.4.0",
+    "dotenv": "^16.3.2",
+    "ethers": "^6.10.0"
   }
 }
