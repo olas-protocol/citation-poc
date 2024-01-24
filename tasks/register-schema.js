@@ -1,5 +1,5 @@
 
-// npx hardhat register-schema --schema <SCHEMA_TEXT> --network<NETWORK_NAME>
+// npx hardhat register-schema --schema <SCHEMA_TEXT> --network <NETWORK_NAME>
 
 const { types, task } = require("hardhat/config");
 
