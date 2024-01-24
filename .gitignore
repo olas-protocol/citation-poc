@@ -22,6 +22,3 @@ artifacts/
 
 # Code Formatting
 .vscode/
-
-# Registered Schema UIDs
-registered-schmea-uids.txt
