@@ -3,8 +3,8 @@ const { types } = require("hardhat/config");
 
 task("compute-uid", "Computes the UID for a given schema")
     .addParam("schema", "The schema string")
-    .addParam("resolver", "The resolver address")
-    .addParam("revocable", "Revocable boolean", false, types.boolean)
+    .addOptionalParam("resolver", "The resolver address", "0x0000000000000000000000000000000000000000", types.string)
+    .addOptionalParam("revocable", "Revocable boolean", false, types.boolean)
     .setAction(async (taskArgs, hre) => {
         const { ethers } = require("ethers");
         const colors = require('colors');
