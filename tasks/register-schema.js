@@ -29,27 +29,21 @@ task("register-schema", "Registers a schema")
             resolver: taskArgs.resolver,
             revocable: taskArgs.revocable
         };
-
         // compute schema UID
         const computedUid = await run("compute-uid", schemaParams);
 
-        // checks if schema exists, if not, registers it
-        let existingSchema;
-        try {
-            existingSchema = await schemaRegistry.getSchema({ uid: computedUid });
-            console.log(colors.red('\nSchema already exists:', existingSchema, '\n script exiting'));
-        } catch (error) {
-            if (error.message === 'Schema not found') {
-                existingSchema = null;
-            }
-        }
+        console.log(colors.blue("\nChecking if schema exists..."));
+        const fetchedSchema = await run("fetch-schema", { uid: computedUid });
 
-        if (existingSchema === null) {
-            console.log(colors.blue("\nSchema does not exist, registering..."));
-            const transaction = await schemaRegistry.register(schemaParams);
-            const schemaUID = await transaction.wait();
-            fs.appendFileSync('./' + network.name + '-registered-schema-uids.txt', taskArgs.schema + ' ' + schemaUID + '\n');
-            console.log(colors.green("\nSchema successfully registered!"));
+        if (fetchedSchema != null) {
+            console.log(colors.red("\nSchema already exists, exiting..."));
+            return;
         }
+        console.log(colors.blue("\nSchema does not exist, registering..."));
+        const transaction = await schemaRegistry.register(schemaParams);
+        const schemaUID = await transaction.wait();
+        fs.appendFileSync('./' + network.name + '-registered-schema-uids.txt', taskArgs.schema + ' ' + schemaUID + '\n');
+        console.log(colors.green("\nSchema successfully registered!"));
+
     });
 

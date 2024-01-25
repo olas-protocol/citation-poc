@@ -15,8 +15,9 @@ task("fetch-schema", "Fetches a schema")
         try {
             schema = await schemaRegistry.getSchema({ uid: taskArgs.uid });
             console.log(colors.green("\nSchema fetched successfully: ", schema));
+            return schema;
         } catch (error) {
             console.error(colors.red('\n', error));
+            return null;
         }
-        return schema;
     });
