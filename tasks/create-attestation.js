@@ -1,11 +1,13 @@
-// npx hardhat create-attestation --onchain <BOOLEAN> --network <NETWORK_NAME>
-// npx hardhat create-attestation --onchain true --network sepolia
-const { types } = require("hardhat/config");
+// npx hardhat create-attestation --schema-uid <SCHEMA-UID> --network <NETWORK_NAME>
+// npx hardhat create-attestation --schema-uid  0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f --onchain true --network sepolia
+// NOTE: change data to attest to before running script
+const { types, task } = require("hardhat/config");
 const fs = require('fs');
 const colors = require('colors');
 const { SchemaEncoder, EAS } = require("@ethereum-attestation-service/eas-sdk");
 const { ethers } = require("ethers");
 task("create-attestation", "Creates an attestation")
+    .addParam("schemaUid", "Schema which you want to use for attestation")
     .addParam("onchain", "To check if the attestation is onchain or offchain", false, types.boolean)
     .setAction(async (taskArgs) => {
         const { run, network } = require('hardhat');
@@ -18,59 +20,56 @@ task("create-attestation", "Creates an attestation")
         const eas = new EAS(EASContractAddress);
         eas.connect(signer);
 
-        console.log(colors.bold("\n==> Running register-schema task..."));
+        console.log(colors.bold("\n==> Running create-attestation task..."));
 
-        // hardcoded schema items and values
-        const schemaItems = [
+        console.log(colors.blue("\nTrying to fetch schema for uid:", taskArgs.schemaUid));
+        const fetchedSchema = await run("fetch-schema", { uid: taskArgs.schemaUid });
+        if (fetchedSchema === null) {
+            console.log(colors.red("\nSchema does not exist, exiting..."));
+            return;
+        }
+
+        // initialize schemaEncoder with schema string
+        const schemaEncoder = new SchemaEncoder(fetchedSchema.schema);
+        // NOTE: CHANGE DATA HERE
+        // custom attestation data
+        const dataToAttest = [
             {
                 name: "citationUID", value: [
                     ethers.encodeBytes32String("exampleUID1"),
                     ethers.encodeBytes32String("exampleUID2")
                 ], type: "bytes32[]"
             },
-            { name: "contributorName", value: "Bob", type: "string" },
-            { name: "articleTitle", value: 'Why GM is new hello?', type: "string" },
-            { name: "articleHash", value: ethers.encodeBytes32String('random hash'), type: "bytes32" },
-            { name: "urlOfContent", value: "https://olas.info/1332", type: "string" }
-        ];
-        // schema details
-        const resolver = "0x0000000000000000000000000000000000000000";
-        const revocable = false;
-        const expirationTime = 0;
+            { name: "authorName", value: "OBob", type: "bytes32" },
+            { name: "articleTitle", value: 'Why GM is new hello?!!', type: "string" },
+            { name: "articleHash", value: 'random hash!!', type: "bytes32" },
+            { name: "urlOfContent", value: "our-url-1", type: "string" }
+        ]
+
+        // main schema details
+        // NOTE: CHANGE DATA HERE
         const recipient = "0xe13EE316998654BC47f61d4787f34cE0B50ED7fD";
-
-        // get the schema string from the schema items
-        const schema = schemaItems.map(param => `${param.type} ${param.name}`).join(", ");
-        // compute schema UID
-        const schemaUID = await run("compute-uid", { schema, resolver, revocable });
-
-        console.log(colors.blue("\nTrying to fetch schema:", schemaUID));
-        // check if schema exists with the given schema values
-        const fetchedSchema = await run("fetch-schema", { uid: schemaUID });
-        if (fetchedSchema === null) {
-            console.log(colors.red("\nSchema does not exist, exiting..."));
-            return;
-        }
-        // encode schema items
-        const schemaEncoder = new SchemaEncoder(schema);
-        const encodedSchemaItems = schemaEncoder.encodeData(schemaItems);
+        const expirationTime = 0;
+        const revocable = false;
+        // dataToAttest format should match with the schema UID's schema, otherwise encoding will fail
+        const encodedData = schemaEncoder.encodeData(dataToAttest);
 
         if (taskArgs.onchain) {
             console.log(colors.blue("\nCreating onchain attestation..."));
             try {
                 const tx = await eas.attest({
-                    schema: schemaUID,
+                    schema: taskArgs.schemaUid,
                     data: {
                         recipient,
                         expirationTime,
                         revocable,
-                        data: encodedSchemaItems,
+                        data: encodedData,
                     },
                 });
 
                 const attestationUID = await tx.wait();
                 // Append attestation UID to the file
-                appendObjectToJsonFile(`${networkName}-attestations.json`, attestationUID);
+                appendObjectToJsonFile(`${networkName}-attestations.json`, 'schemaUID: ' + taskArgs.schemaUid + ' attestationUID: ' + attestationUID);
 
                 console.log(colors.green("\nOnchain Attestation successfully created!"));
                 console.log(colors.yellow("\nAttestation UID:", attestationUID));
@@ -90,9 +89,9 @@ task("create-attestation", "Creates an attestation")
                 revocable,
                 version: 1,
                 nonce: 0,
-                schema: schemaUID,
+                schema: taskArgs.schemaUid,
                 refUID: '0x0000000000000000000000000000000000000000000000000000000000000000',
-                data: encodedSchemaItems,
+                data: encodedData,
             }, signer);
 
             // Append offchain attestation object to the file
