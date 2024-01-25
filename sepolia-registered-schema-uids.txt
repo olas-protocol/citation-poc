@@ -1,2 +1,3 @@
 bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f
 bytes32[] citationUID,bytes32 authorName,string articleTitle,bytes32 articleHash,string urlOfContent 0xa26b123fa4d18e87c4efb7d968725da5daa707d5ba6e3c6b22fe25fd56b4fa22
+bytes32[] citationUID, string contributorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x7d1dec25c6e300c1c17628602a902d43bfc1ac38967e248ac528290781f9884a

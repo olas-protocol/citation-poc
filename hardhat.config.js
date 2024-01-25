@@ -3,6 +3,8 @@ require("@nomicfoundation/hardhat-foundry");
 require("./tasks/register-schema");
 require("./tasks/compute-uid");
 require("./tasks/fetch-schema");
+require("./tasks/create-attestation");
+require("./tasks/fetch-attestation");
 require('dotenv').config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
