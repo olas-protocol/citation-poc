@@ -11,11 +11,12 @@ task("fetch-attestation", "Fetches the attestation data")
         const EASContractAddress = process.env.EAS_ADDRESS_SEPOLIA;
         const eas = new EAS(EASContractAddress);
         eas.connect(signer);
+        console.log(colors.bold("\n==> Running fetch-attestation task..."));
 
         try {
             const attestation = await eas.getAttestation(taskArgs.attestationUid);
-            if (attestation[0] === "0x0000000000000000000000000000000000000000000000000000000000000000") {
-                console.log(colors.red("\No attestation found with the given UID"));
+            if (attestation.uid === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+                console.log(colors.red("\n No attestation found with the given UID"));
             }
             else {
                 console.log(colors.green("\nAttestation fetched successfully: ", attestation));
