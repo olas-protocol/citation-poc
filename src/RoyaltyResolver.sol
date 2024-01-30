@@ -50,7 +50,22 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
     function decodeCustomData(
         bytes memory data
     ) private pure returns (CustomAttestationSchema memory) {
-        return abi.decode(data, (CustomAttestationSchema));
+        (
+            bytes32[] memory citationUID,
+            bytes32 authorName,
+            string memory articleTitle,
+            bytes32 articleHash,
+            string memory urlOfContent
+        ) = abi.decode(data, (bytes32[], bytes32, string, bytes32, string));
+
+        return
+            CustomAttestationSchema({
+                citationUID: citationUID,
+                authorName: authorName,
+                articleTitle: articleTitle,
+                articleHash: articleHash,
+                urlOfContent: urlOfContent
+            });
     }
 
     /// @param value = article stake amount
@@ -68,6 +83,8 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
 
         uint256 receiversUIDsListLength = customData.citationUID.length;
         if (receiversUIDsListLength == 0) {
+            IAuthorStake(_stakingContract).stakeEther{value: msg.value}();
+            emit TransferredStake(_stakingContract, msg.value);
             return true;
         }
 

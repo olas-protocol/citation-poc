@@ -1,3 +1,10 @@
 bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f
 bytes32[] citationUID,bytes32 authorName,string articleTitle,bytes32 articleHash,string urlOfContent 0xa26b123fa4d18e87c4efb7d968725da5daa707d5ba6e3c6b22fe25fd56b4fa22
 bytes32[] citationUID, string contributorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x7d1dec25c6e300c1c17628602a902d43bfc1ac38967e248ac528290781f9884a
+olasSchema 0x6301bb59ef18f86526ff55b5872a431b84d6974f1d965b8b066a116b4b6c87fe
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string randomSteing 0xa0efcf21461b809b139695e2d1544a66ae0bc4b0cf08d55fc88f9502d5331014
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfCont 0xf6362b8db5366a6cacf1b03cbc31cff4f41e952989edf95bd8a8a7439fa17d3d
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContt 0x197d2564887184f334fabad0e1084a11535e53b16881f61784cb80ace773242b
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContttt 0xb12ef7ca938742065fc84872aa91f8de87c864179106799174c1b2042dc7b2d0
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string gggg 0x97022b3c79ec1691cd01874bce562b094e80fed8253b6609da89ec046552d75c
+bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x3fe3b953b870a24b213bb11365809709a69699a73db30d7f660fd26ca9218109
