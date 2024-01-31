@@ -39,7 +39,6 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
             "Invalid staking contract address"
         );
         _stakingContract = stakingContract;
-        _eas = eas;
     }
 
     function isPayable() public pure override returns (bool) {
@@ -83,7 +82,9 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
 
         uint256 receiversUIDsListLength = customData.citationUID.length;
         if (receiversUIDsListLength == 0) {
-            IAuthorStake(_stakingContract).stakeEther{value: msg.value}();
+            IAuthorStake(_stakingContract).stakeEtherFrom{value: msg.value}(
+                msg.sender
+            );
             emit TransferredStake(_stakingContract, msg.value);
             return true;
         }
@@ -114,7 +115,9 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
             emit RoyaltyDistributed(royaltyReceiverAddress, individualRoyalty);
         }
 
-        IAuthorStake(_stakingContract).stakeEther{value: stakingAmount}();
+        IAuthorStake(_stakingContract).stakeEtherFrom{value: stakingAmount}(
+            msg.sender
+        );
         emit TransferredStake(_stakingContract, stakingAmount);
 
         return true;

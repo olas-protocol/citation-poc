@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 interface IAuthorStake {
     /// @notice Allows a user to stake Ether in the contract.
-    function stakeEther() external payable;
+    function stakeEtherFrom(address staker) external payable;
 
     /// @notice Allows a user to withdraw their staked Ether from the contract.
     /// @param amount The amount of Ether to withdraw.

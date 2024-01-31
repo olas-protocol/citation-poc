@@ -24,10 +24,10 @@ contract AuthorStakingContract is ReentrancyGuard {
         _;
     }
 
-    function stakeEther() public payable nonReentrant {
+    function stakeEtherFrom(address staker) public payable nonReentrant {
         require(msg.value > 0, "Must send Ether to stake");
-        stakes[msg.sender] += msg.value;
-        emit EtherStaked(msg.sender, msg.value);
+        stakes[staker] += msg.value;
+        emit EtherStaked(staker, msg.value);
     }
 
     // Allows users to withdraw their staked Ether.
@@ -43,10 +43,5 @@ contract AuthorStakingContract is ReentrancyGuard {
     // Function to check the staked balance of a caller.
     function getStakedBalance(address staker) external view returns (uint256) {
         return stakes[staker];
-    }
-
-    // Function to receive Ether. msg.data must be empty
-    receive() external payable {
-        stakeEther();
     }
 }
