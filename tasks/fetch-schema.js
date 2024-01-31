@@ -17,7 +17,6 @@ task("fetch-schema", "Fetches a schema")
             console.log(colors.green("\nSchema fetched successfully: ", schema));
             return schema;
         } catch (error) {
-            console.error(colors.red('\n', error));
             return null;
         }
     });

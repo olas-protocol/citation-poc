@@ -26,7 +26,7 @@ task("register-schema", "Registers a schema")
 
         const schemaParams = {
             schema: taskArgs.schema,
-            resolver: taskArgs.resolver,
+            resolverAddress: taskArgs.resolver,
             revocable: taskArgs.revocable
         };
         // compute schema UID
