@@ -2,14 +2,14 @@
 pragma solidity ^0.8.19;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {AuthorStakingContract} from "../src/AuthorStake.sol";
+import {AuthorStake} from "../src/AuthorStake.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract AuthorStakingContractTest is Test {
-    AuthorStakingContract public stakingContract;
+contract AuthorStakeTest is Test {
+    AuthorStake public stakingContract;
 
     function setUp() public {
-        stakingContract = new AuthorStakingContract();
+        stakingContract = new AuthorStake();
     }
 
     function testSuccessfulEtherStaking() public {
@@ -19,7 +19,7 @@ contract AuthorStakingContractTest is Test {
         // Simulate sending Ether to the staking contract
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         // Verify the staked balance is updated
         uint256 stakedBalance = stakingContract.getStakedBalance(staker);
@@ -38,7 +38,7 @@ contract AuthorStakingContractTest is Test {
         // Setup: Stake Ether
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         // Withdraw part of the staked Ether
         vm.prank(staker);
@@ -61,7 +61,7 @@ contract AuthorStakingContractTest is Test {
         // Setup: Stake Ether
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         // Attempt to withdraw more than the staked amount should fail
         vm.prank(staker);
@@ -80,12 +80,12 @@ contract AuthorStakingContractTest is Test {
         // Staker 1 stakes
         vm.deal(staker1, stakeAmount1);
         vm.prank(staker1);
-        stakingContract.stakeEther{value: stakeAmount1}();
+        stakingContract.stakeEtherFrom{value: stakeAmount1}(staker1);
 
         // Staker 2 stakes
         vm.deal(staker2, stakeAmount2);
         vm.prank(staker2);
-        stakingContract.stakeEther{value: stakeAmount2}();
+        stakingContract.stakeEtherFrom{value: stakeAmount2}(staker2);
 
         // Verify each staker's balance independently
         uint256 stakedBalance1 = stakingContract.getStakedBalance(staker1);
@@ -133,7 +133,7 @@ contract AuthorStakingContractTest is Test {
         // Setup: Stake Ether
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         // Withdraw the entire staked amount
         vm.prank(staker);
@@ -156,13 +156,13 @@ contract AuthorStakingContractTest is Test {
 
         vm.deal(staker, initialStake + secondStake);
         vm.prank(staker);
-        stakingContract.stakeEther{value: initialStake}();
+        stakingContract.stakeEtherFrom{value: initialStake}(staker);
 
         vm.prank(staker);
         stakingContract.withdrawStake(withdrawAmount);
 
         vm.prank(staker);
-        stakingContract.stakeEther{value: secondStake}();
+        stakingContract.stakeEtherFrom{value: secondStake}(staker);
 
         uint256 finalBalance = stakingContract.getStakedBalance(staker);
         assertEq(
@@ -178,7 +178,7 @@ contract AuthorStakingContractTest is Test {
 
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         vm.prank(staker);
         stakingContract.withdrawStake(stakeAmount);
@@ -198,10 +198,10 @@ contract AuthorStakingContractTest is Test {
 
         vm.deal(staker, firstStake + secondStake);
         vm.prank(staker);
-        stakingContract.stakeEther{value: firstStake}();
+        stakingContract.stakeEtherFrom{value: firstStake}(staker);
 
         vm.prank(staker);
-        stakingContract.stakeEther{value: secondStake}();
+        stakingContract.stakeEtherFrom{value: secondStake}(staker);
 
         uint256 totalStaked = stakingContract.getStakedBalance(staker);
         assertEq(
@@ -219,11 +219,11 @@ contract AuthorStakingContractTest is Test {
 
         vm.deal(staker1, stakeAmount1);
         vm.prank(staker1);
-        stakingContract.stakeEther{value: stakeAmount1}();
+        stakingContract.stakeEtherFrom{value: stakeAmount1}(staker1);
 
         vm.deal(staker2, stakeAmount2);
         vm.prank(staker2);
-        stakingContract.stakeEther{value: stakeAmount2}();
+        stakingContract.stakeEtherFrom{value: stakeAmount2}(staker2);
 
         uint256 contractBalance = address(stakingContract).balance;
         assertEq(
@@ -239,7 +239,7 @@ contract AuthorStakingContractTest is Test {
 
         vm.deal(staker, 1 ether); // Ensure staker has some ether to cover gas costs
         vm.prank(staker);
-        stakingContract.stakeEther{value: stakeAmount}();
+        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
         vm.expectRevert("Must send Ether to stake");
     }
 }

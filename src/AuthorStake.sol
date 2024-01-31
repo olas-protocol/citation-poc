@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-/// @title AuthorStakingContract
+/// @title AuthorStake
 /// @notice A simple contract for staking Ether.
-contract AuthorStakingContract is ReentrancyGuard {
+contract AuthorStake is ReentrancyGuard {
     // Mapping to track staked Ether balances of each address.
     mapping(address => uint256) public stakes;
     // Event to log staking activity.
