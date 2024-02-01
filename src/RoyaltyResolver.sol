@@ -72,8 +72,10 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         Attestation calldata attestation,
         uint256 value
     ) internal override nonReentrant returns (bool) {
+        address attesterAddress = attestation.attester;
+
         if (value == 0) revert InsufficientEthValueSent();
-        emit ValueReceived(msg.sender, value);
+        emit ValueReceived(attesterAddress, value);
 
         // Decode the attestation's data field into a struct
         CustomAttestationSchema memory customData = decodeCustomData(
@@ -83,7 +85,7 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         uint256 receiversUIDsListLength = customData.citationUID.length;
         if (receiversUIDsListLength == 0) {
             IAuthorStake(_stakingContract).stakeEtherFrom{value: msg.value}(
-                msg.sender
+                attesterAddress
             );
             emit TransferredStake(_stakingContract, msg.value);
             return true;
@@ -116,7 +118,7 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         }
 
         IAuthorStake(_stakingContract).stakeEtherFrom{value: stakingAmount}(
-            msg.sender
+            attesterAddress
         );
         emit TransferredStake(_stakingContract, stakingAmount);
 
