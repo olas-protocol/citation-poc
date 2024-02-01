@@ -15,7 +15,7 @@ module.exports = {
     },
     sepolia: {
       accounts: [process.env.PRIVATE_KEY],
-      url: process.env.ETH_NODE_URI_SEPOLIA,
+      url: process.env.SEPOLIA_RPC_URL,
       chainId: 11155111,
     },
   }
