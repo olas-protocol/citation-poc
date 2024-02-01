@@ -96,8 +96,8 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         if (individualRoyalty == 0) {
             revert InsufficientIndividualRoyaltyPayment();
         }
-
-        uint256 stakingAmount = value - totalRoyalty; // Calculate the remaining staking amount after deducting royalty fee and transfer to the staking contract.
+        // Calculate the remaining staking amount after deducting royalty fee and transfer to the staking contract.
+        uint256 stakingAmount = value - totalRoyalty;
 
         for (uint256 i = 0; i < receiversUIDsListLength; ++i) {
             // Access each citationUID from the decoded data
@@ -113,7 +113,8 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
             address payable royaltyReceiverAddress = payable(
                 receiverAttestation.attester
             );
-            royaltyReceiverAddress.sendValue(individualRoyalty); // Using OpenZeppelin's sendValue() for safe Eth transfer.
+            royaltyReceiverAddress.sendValue(individualRoyalty);
+            // Using OpenZeppelin's sendValue() for safe Eth transfer.
             emit RoyaltyDistributed(royaltyReceiverAddress, individualRoyalty);
         }
 
@@ -134,7 +135,3 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         revert DirectPaymentsNotAllowed();
     }
 }
-
-// 1: add Solady safeTransfer
-// 2: check for potential integer overflow / underflow issues when calculating the individualRoyalty
-// 4: add import specific contract versions
