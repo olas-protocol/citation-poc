@@ -51,6 +51,7 @@ task("create-attestation", "Creates an attestation")
         const recipient = "0xe13EE316998654BC47f61d4787f34cE0B50ED7fD";
         const expirationTime = 0;
         const revocable = false;
+        const stakeAmount = ethers.parseEther("0.0001");
         // dataToAttest format should match with the schema UID's schema, otherwise encoding will fail
         const encodedData = schemaEncoder.encodeData(dataToAttest);
 
@@ -64,6 +65,7 @@ task("create-attestation", "Creates an attestation")
                         expirationTime,
                         revocable,
                         data: encodedData,
+                        value: stakeAmount,
                     },
                 });
 
