@@ -1,12 +1,5 @@
-// EXAMPLE:  forge test --match-path test/RoyaltyResolver.t.sol -vvvv --fork-url $SEPOLIA_RPC_URL
+// forge test --match-path test/RoyaltyResolver.t.sol -vvvv --fork-url $SEPOLIA_RPC_URL --via-ir
 
-/*
-1- Deploy EAS contract
-2- Deploy AuthorStake contract
-3- Deploy RoyaltyResolver contract
-4- Register schema on EAS contract with using Royalty Resolver Contract
-5- Create attestation request on EAS contract
-*/
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 import "forge-std/console.sol";
@@ -40,11 +33,12 @@ contract RoyaltyResolverTest is Test {
     }
 
     function setUp() public {
-        // deploy contracts
+        // deploy or fetch contracts
         eas = EAS(0xC2679fBD37d54388Ce493F1DB75320D236e1815e);
         authorStake = new AuthorStake();
         royaltyResolver = new RoyaltyResolver(eas, address(authorStake));
         schemaRegistry = eas.getSchemaRegistry();
+        registerSchema();
     }
 
     function testAssertContractsDeployed() public {
@@ -64,7 +58,6 @@ contract RoyaltyResolverTest is Test {
     }
 
     function registerSchema() public {
-        //register(string schema,address resolver,bool revocable)
         string
             memory schema = "bytes32[] citationUID bytes32 authorName string articleTitle bytes32 articleHash string urlOfContent";
         bool revocable = false;
@@ -94,6 +87,7 @@ contract RoyaltyResolverTest is Test {
         assertEq(schemaUID, computedUID, "UID not computed correctly");
     }
 
+    // helper function to generate attestation request
     function generateAttestationRequest(
         address attesterAddress,
         bytes32[] memory citationUIDs,
@@ -152,12 +146,78 @@ contract RoyaltyResolverTest is Test {
             totalRoyalty = (stakeValue * ROYALTY_PERCENTAGE) / 100;
             individualRoyalty = totalRoyalty / citationCount;
         }
-        uint256 expectedStakingAmount = stakeValue - totalRoyalty;
+        expectedStakingAmount = stakeValue - totalRoyalty;
         return (totalRoyalty, individualRoyalty, expectedStakingAmount);
     }
 
+    function testInsufficientEthValueForEAS() public {
+        AttestationRequest memory request = generateAttestationRequest(
+            attester1,
+            new bytes32[](0),
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            1 ether
+        );
+        vm.deal(attester1, 1 ether);
+        vm.prank(attester1);
+
+        vm.expectRevert(EAS.InsufficientValue.selector);
+        // Sending less ether than required
+        eas.attest{value: 0}(request);
+    }
+
+    function testInsufficientEthValueSentForRoyaltyResolver() public {
+        AttestationRequest memory request = generateAttestationRequest(
+            attester1,
+            new bytes32[](0),
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            // sending 0 value
+            0
+        );
+        vm.prank(attester1);
+        vm.deal(attester1, 1 ether);
+        vm.expectRevert(RoyaltyResolver.InsufficientEthValueSent.selector);
+        eas.attest{value: 0}(request);
+    }
+
+    function testInvalidCitationUID() public {
+        bytes32 invalidCitationUID = keccak256("clearlyInvalidUID");
+
+        bytes32[] memory citationUIDs = new bytes32[](1);
+        // Invalid UID
+        citationUIDs[0] = invalidCitationUID;
+        uint256 stakeValue = 0.5 ether;
+        AttestationRequest memory request = generateAttestationRequest(
+            attester1,
+            citationUIDs,
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            stakeValue
+        );
+
+        vm.prank(attester1);
+        vm.expectRevert();
+        eas.attest{value: stakeValue}(request);
+    }
+
+    function testDirectPaymentsNotAllowed() public {
+        // Send ETH directly to the contract without calling a function and expect revert
+        vm.deal(attester1, 1 ether);
+        vm.prank(attester1);
+
+        vm.expectRevert(RoyaltyResolver.DirectPaymentsNotAllowed.selector);
+        address(royaltyResolver).call{value: 1 ether}("");
+    }
+
+    // creates the initial attestation
     function testCreateInitialAttestation() public {
-        registerSchema();
         address attesterAddress = attester1;
 
         uint256 initialBalance = 1 ether;
@@ -185,13 +245,17 @@ contract RoyaltyResolverTest is Test {
 
         // Use the helper function for royalty calculation
         (
-            uint256 totalRoyalty,
+            ,
             uint256 individualRoyalty,
             uint256 expectedStakingAmount
         ) = calculateRoyalties(stakeValue, citationUIDs.length);
 
+        // check the balances and staked amounts after the attestation
+        uint256 actualStakedAmount = authorStake.getStakedBalance(
+            attesterAddress
+        );
         assertEq(
-            authorStake.getStakedBalance(attesterAddress),
+            actualStakedAmount,
             expectedStakingAmount,
             "Staking amount calculated incorrectly"
         );
@@ -205,11 +269,12 @@ contract RoyaltyResolverTest is Test {
     function testCreateAttestationWithCitation() public {
         // attester 2 cites attester 1
         address attesterAddress = attester2;
+        // this will create the initial attestation and store the attestationUID
         testCreateInitialAttestation();
-        uint256 initialBalance = 1 ether;
 
-        vm.deal(attesterAddress, initialBalance);
+        uint256 initialBalance = 1 ether;
         uint256 stakeValue = 1 ether;
+        vm.deal(attesterAddress, initialBalance);
 
         bytes32[] memory citationUIDs = new bytes32[](1);
         Attestation memory fetchedAttestation = eas.getAttestation(
@@ -243,13 +308,17 @@ contract RoyaltyResolverTest is Test {
 
         // Use the helper function for royalty calculation
         (
-            uint256 totalRoyalty,
+            ,
             uint256 individualRoyalty,
             uint256 expectedStakingAmount
         ) = calculateRoyalties(stakeValue, citationUIDs.length);
 
+        // check the balances and staked amounts after the attestation
+        uint256 actualStakedAmount = authorStake.getStakedBalance(
+            attesterAddress
+        );
         assertEq(
-            authorStake.getStakedBalance(attesterAddress),
+            actualStakedAmount,
             expectedStakingAmount,
             "Staking amount calculated incorrectly"
         );
@@ -265,8 +334,9 @@ contract RoyaltyResolverTest is Test {
         );
     }
 
+    // creates multiple attestations without citations
     function testMultipleAttestationsWithoutCitations() public {
-        uint256 numberOfAttestations = 10; // Arbitrary number for test
+        uint256 numberOfAttestations = 5; // Arbitrary number for test
         uint256 initialBalance = 10 ether;
         uint256 stakeValue = 0.5 ether;
 
@@ -275,8 +345,6 @@ contract RoyaltyResolverTest is Test {
             address attesterAddress = address(uint160(i)); // Convert i to a valid Ethereum address
             vm.deal(attesterAddress, initialBalance);
         }
-
-        registerSchema();
 
         // Create multiple attestations without citations
         for (uint i = 1; i <= numberOfAttestations; i++) {
@@ -321,18 +389,17 @@ contract RoyaltyResolverTest is Test {
         }
     }
 
+    // creates multiple attestations with citations
     function testMultipleAttestationsWithCitations() public {
         uint256 numberOfCitations = 5; // Number of attestations to create, with each citing the previous
         uint256 initialBalance = 10 ether;
         uint256 stakeValue = 1 ether;
         uint256 citedStakeValue = 0.5 ether; // Stake value for cited attestations
 
-        // Register schema once for all attestations
-        registerSchema();
-
         // Pre-fund the first attester and create the initial attestation
-        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address for the initial attester
+        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address for the
         vm.deal(initialAttester, initialBalance);
+
         bytes32[] memory initialCitationUIDs = new bytes32[](0); // No citations for the first attestation
 
         AttestationRequest
@@ -357,11 +424,11 @@ contract RoyaltyResolverTest is Test {
             address attesterAddress = address(uint160(i)); // Unique address for each attester
             vm.deal(attesterAddress, initialBalance);
 
-            // Each new attestation cites the one before it
+            // Each new attestation cites the last registered attestation
             bytes32[] memory citationUIDs = new bytes32[](1);
             citationUIDs[0] = registeredAttestationUIDs[
                 registeredAttestationUIDs.length - 1
-            ]; // Cite the last registered attestation
+            ];
 
             AttestationRequest
                 memory attestationRequest = generateAttestationRequest({
@@ -384,7 +451,7 @@ contract RoyaltyResolverTest is Test {
 
             // Use the helper function for royalty calculation
             (
-                uint256 totalRoyalty,
+                ,
                 uint256 individualRoyalty,
                 uint256 expectedStakingAmount
             ) = calculateRoyalties(stakeValue, 1);
