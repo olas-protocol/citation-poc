@@ -20,8 +20,8 @@ contract RoyaltyResolverTest is Test {
     // Variables
     address attester1 = address(1);
     address attester2 = address(2);
+    address attester3 = address(3);
     bytes32[] private registeredSchemaUIDs;
-    bytes32[] private registeredAttestationUIDs;
     uint256 ROYALTY_PERCENTAGE = 10;
 
     struct CustomAttestationSchema {
@@ -38,6 +38,7 @@ contract RoyaltyResolverTest is Test {
         authorStake = new AuthorStake();
         royaltyResolver = new RoyaltyResolver(eas, address(authorStake));
         schemaRegistry = eas.getSchemaRegistry();
+
         registerSchema();
     }
 
@@ -87,7 +88,7 @@ contract RoyaltyResolverTest is Test {
         assertEq(schemaUID, computedUID, "UID not computed correctly");
     }
 
-    // helper function to generate attestation request
+    // helper function to generate attestation request to be used in attest function
     function generateAttestationRequest(
         address attesterAddress,
         bytes32[] memory citationUIDs,
@@ -126,6 +127,7 @@ contract RoyaltyResolverTest is Test {
         return attestationRequest;
     }
 
+    // helper function to calculate royalties according to the formulas in the contract
     function calculateRoyalties(
         uint256 stakeValue,
         uint256 citationCount
@@ -150,6 +152,7 @@ contract RoyaltyResolverTest is Test {
         return (totalRoyalty, individualRoyalty, expectedStakingAmount);
     }
 
+    // Testing custom errors
     function testInsufficientEthValueForEAS() public {
         AttestationRequest memory request = generateAttestationRequest(
             attester1,
@@ -216,14 +219,13 @@ contract RoyaltyResolverTest is Test {
         address(royaltyResolver).call{value: 1 ether}("");
     }
 
-    // creates the initial attestation
-    function testCreateInitialAttestation() public {
-        address attesterAddress = attester1;
-
+    // helper function creates attestation without any citations
+    function createAttestationWithoutCitation(
+        address attesterAddress,
+        uint256 stakeValue
+    ) public returns (bytes32) {
         uint256 initialBalance = 1 ether;
-        uint256 stakeValue = 0.5 ether;
-
-        vm.deal(attester1, initialBalance);
+        vm.deal(attesterAddress, initialBalance);
         //empty bytes32 array
         bytes32[] memory citationUIDs = new bytes32[](0);
         AttestationRequest
@@ -241,14 +243,12 @@ contract RoyaltyResolverTest is Test {
         bytes32 attestationUID = eas.attest{value: stakeValue}(
             attestationRequest
         );
-        registeredAttestationUIDs.push(attestationUID);
 
         // Use the helper function for royalty calculation
-        (
-            ,
-            uint256 individualRoyalty,
-            uint256 expectedStakingAmount
-        ) = calculateRoyalties(stakeValue, citationUIDs.length);
+        (, , uint256 expectedStakingAmount) = calculateRoyalties(
+            stakeValue,
+            citationUIDs.length
+        );
 
         // check the balances and staked amounts after the attestation
         uint256 actualStakedAmount = authorStake.getStakedBalance(
@@ -264,26 +264,34 @@ contract RoyaltyResolverTest is Test {
             (initialBalance - stakeValue),
             "Attester's balance not updated correctly"
         );
+        return attestationUID;
     }
 
-    function testCreateAttestationWithCitation() public {
-        // attester 2 cites attester 1
-        address attesterAddress = attester2;
-        // this will create the initial attestation and store the attestationUID
-        testCreateInitialAttestation();
+    // helper function creates attestation with citations
+    function createAttestationWithCitation(
+        address attesterAddress,
+        bytes32[] memory citationUIDs,
+        uint256 stakeValue
+    ) public returns (bytes32) {
+        uint256 initialAttesterBalance = 1 ether;
+        vm.deal(attesterAddress, initialAttesterBalance);
 
-        uint256 initialBalance = 1 ether;
-        uint256 stakeValue = 1 ether;
-        vm.deal(attesterAddress, initialBalance);
-
-        bytes32[] memory citationUIDs = new bytes32[](1);
-        Attestation memory fetchedAttestation = eas.getAttestation(
-            registeredAttestationUIDs[0]
+        // Initialize an array to hold initial balances of cited authors
+        uint256[] memory initialCitedAuthorBalances = new uint256[](
+            citationUIDs.length
         );
-        address citedAddress = fetchedAttestation.attester;
-        uint256 initialCitedAuthorBalance = citedAddress.balance;
-        // citing the first author by giving his attestation UID
-        citationUIDs[0] = registeredAttestationUIDs[0];
+        address[] memory citedAuthors = new address[](citationUIDs.length);
+        // Fetch the initial balances of the cited authors
+        for (uint i = 0; i < citationUIDs.length; i++) {
+            // fetch cited author's address using the citation UID
+            Attestation memory fetchedAttestation = eas.getAttestation(
+                citationUIDs[i]
+            );
+            address citedAddress = fetchedAttestation.attester;
+            citedAuthors[i] = citedAddress;
+            initialCitedAuthorBalances[i] = citedAddress.balance;
+        }
+
         AttestationRequest
             memory attestationRequest = generateAttestationRequest({
                 attesterAddress: attesterAddress,
@@ -317,6 +325,7 @@ contract RoyaltyResolverTest is Test {
         uint256 actualStakedAmount = authorStake.getStakedBalance(
             attesterAddress
         );
+
         assertEq(
             actualStakedAmount,
             expectedStakingAmount,
@@ -324,165 +333,82 @@ contract RoyaltyResolverTest is Test {
         );
         assertEq(
             attesterAddress.balance,
-            (initialBalance - stakeValue),
-            "Cited author's balance not updated correctly"
+            (initialAttesterBalance - stakeValue),
+            "Attester's balance not updated correctly"
         );
-        assertEq(
-            citedAddress.balance,
-            initialCitedAuthorBalance + individualRoyalty,
-            "Cited author's balance not updated correctly"
-        );
+        // Check the balances of the cited authors
+        for (uint i = 0; i < citationUIDs.length; i++) {
+            uint256 initialCitedAuthorBalance = initialCitedAuthorBalances[i];
+            uint256 finalBalance = citedAuthors[i].balance;
+            assertEq(
+                finalBalance,
+                initialCitedAuthorBalance + individualRoyalty,
+                "Cited author's balance not updated correctly"
+            );
+        }
+        return attestationUID;
     }
 
     // creates multiple attestations without citations
     function testMultipleAttestationsWithoutCitations() public {
         uint256 numberOfAttestations = 5; // Arbitrary number for test
-        uint256 initialBalance = 10 ether;
         uint256 stakeValue = 0.5 ether;
-
-        // Pre-fund attesters and register schema
-        for (uint i = 1; i <= numberOfAttestations; i++) {
-            address attesterAddress = address(uint160(i)); // Convert i to a valid Ethereum address
-            vm.deal(attesterAddress, initialBalance);
-        }
 
         // Create multiple attestations without citations
         for (uint i = 1; i <= numberOfAttestations; i++) {
             address attesterAddress = address(uint160(i));
-            bytes32[] memory citationUIDs = new bytes32[](0); // No citations
-            AttestationRequest
-                memory attestationRequest = generateAttestationRequest({
-                    attesterAddress: attesterAddress,
-                    citationUIDs: citationUIDs,
-                    authorName: bytes32("author"),
-                    articleTitle: "Article Title",
-                    articleHash: bytes32("articleHash"),
-                    urlOfContent: "http://example.com",
-                    stakeValue: stakeValue
-                });
-
-            // Simulate attestation creation
-            vm.prank(attesterAddress);
-            eas.attest{value: stakeValue}(attestationRequest);
+            createAttestationWithoutCitation(attesterAddress, stakeValue);
         }
+    }
 
-        // Verify balance and staked amount for each attester
-        for (uint i = 1; i <= numberOfAttestations; i++) {
-            address attesterAddress = address(uint160(i));
-            uint256 expectedBalance = initialBalance - stakeValue;
-            uint256 actualBalance = attesterAddress.balance;
-            assertEq(
-                actualBalance,
-                expectedBalance,
-                "Incorrect balance after attestation"
-            );
+    // creates multiple attestations with citation
+    function testMultipleAttestationsWithCitation() public {
+        // Number of attestations to create, with each citing the previous
+        uint256 numberOfCitations = 5;
+        uint256 stakeValue = 1 ether;
 
-            uint256 expectedStakedAmount = stakeValue;
-            uint256 actualStakedAmount = authorStake.getStakedBalance(
-                attesterAddress
-            );
-            assertEq(
-                actualStakedAmount,
-                expectedStakedAmount,
-                "Incorrect staked amount"
+        bytes32[] memory citationUIDs = new bytes32[](1);
+        // Pre-fund the first attester and create the initial attestation
+        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address
+        citationUIDs[0] = createAttestationWithoutCitation(
+            initialAttester,
+            stakeValue
+        );
+
+        // Create subsequent attestations, each citing the previous one
+        for (uint i = 0; i < numberOfCitations; i++) {
+            // generate random attester address: don't use 0 since it will be reverted
+            address attesterAddress = address(uint160(i + 100));
+            // Each new attestation cites the last registered attestation
+            citationUIDs[0] = createAttestationWithCitation(
+                attesterAddress,
+                citationUIDs,
+                stakeValue
             );
         }
     }
 
-    // creates multiple attestations with citations
-    function testMultipleAttestationsWithCitations() public {
-        uint256 numberOfCitations = 5; // Number of attestations to create, with each citing the previous
-        uint256 initialBalance = 10 ether;
-        uint256 stakeValue = 1 ether;
-        uint256 citedStakeValue = 0.5 ether; // Stake value for cited attestations
+    // creates an attestation with multiple citations
+    function testAttestationsWithMultipleCitations() public {
+        uint256 numberOfAttestations = 5; // Arbitrary number for test
+        uint256 stakeValue = 0.5 ether;
+        bytes32[] memory citationUIDs = new bytes32[](numberOfAttestations);
 
-        // Pre-fund the first attester and create the initial attestation
-        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address for the
-        vm.deal(initialAttester, initialBalance);
-
-        bytes32[] memory initialCitationUIDs = new bytes32[](0); // No citations for the first attestation
-
-        AttestationRequest
-            memory initialAttestationRequest = generateAttestationRequest({
-                attesterAddress: initialAttester,
-                citationUIDs: initialCitationUIDs,
-                authorName: bytes32("initialAuthor"),
-                articleTitle: "Initial Article",
-                articleHash: bytes32("initialHash"),
-                urlOfContent: "http://initial.com",
-                stakeValue: citedStakeValue
-            });
-
-        vm.prank(initialAttester);
-        bytes32 initialAttestationUID = eas.attest{value: citedStakeValue}(
-            initialAttestationRequest
-        );
-        registeredAttestationUIDs.push(initialAttestationUID);
-
-        // Create subsequent attestations, each citing the previous one
-        for (uint i = 1; i <= numberOfCitations; i++) {
-            address attesterAddress = address(uint160(i)); // Unique address for each attester
-            vm.deal(attesterAddress, initialBalance);
-
-            // Each new attestation cites the last registered attestation
-            bytes32[] memory citationUIDs = new bytes32[](1);
-            citationUIDs[0] = registeredAttestationUIDs[
-                registeredAttestationUIDs.length - 1
-            ];
-
-            AttestationRequest
-                memory attestationRequest = generateAttestationRequest({
-                    attesterAddress: attesterAddress,
-                    citationUIDs: citationUIDs,
-                    authorName: bytes32("author"),
-                    articleTitle: "Cited Article",
-                    articleHash: bytes32("hash"),
-                    urlOfContent: "http://example.com",
-                    stakeValue: stakeValue
-                });
-            address citedAuthor = eas.getAttestation(citationUIDs[0]).attester;
-            uint256 initialCitedAuthorBalance = citedAuthor.balance;
-
-            vm.prank(attesterAddress);
-            bytes32 attestationUID = eas.attest{value: stakeValue}(
-                attestationRequest
-            );
-            registeredAttestationUIDs.push(attestationUID);
-
-            // Use the helper function for royalty calculation
-            (
-                ,
-                uint256 individualRoyalty,
-                uint256 expectedStakingAmount
-            ) = calculateRoyalties(stakeValue, 1);
-
-            // Check balances and staked amounts after each attestation
-            uint256 expectedAttesterBalance = initialBalance - stakeValue;
-            uint256 actualAttesterBalance = attesterAddress.balance;
-            assertEq(
-                actualAttesterBalance,
-                expectedAttesterBalance,
-                "Incorrect attester balance after attestation"
-            );
-
-            uint256 actualStakedAmount = authorStake.getStakedBalance(
-                attesterAddress
-            );
-            assertEq(
-                actualStakedAmount,
-                expectedStakingAmount,
-                "Incorrect staked amount after attestation"
-            );
-
-            // Verify the cited author's balance is updated with the royalty
-            uint256 expectedCitedAuthorBalance = initialCitedAuthorBalance +
-                individualRoyalty;
-            uint256 actualCitedAuthorBalance = citedAuthor.balance; // Assuming you can access balance directly or via a mock
-            assertEq(
-                actualCitedAuthorBalance,
-                expectedCitedAuthorBalance,
-                "Incorrect cited author balance after royalty distribution"
+        // Create multiple attestations without citations
+        for (uint i = 0; i < numberOfAttestations; i++) {
+            // generate random attester address: don't use 0 since it will be reverted
+            address attester = address(uint160(i + 200));
+            citationUIDs[i] = createAttestationWithoutCitation(
+                attester,
+                stakeValue
             );
         }
+        uint256 stakeValueForMultipleCitations = 1 ether;
+        // create attestation with 5 citations
+        createAttestationWithCitation(
+            attester3,
+            citationUIDs,
+            stakeValueForMultipleCitations
+        );
     }
 }
