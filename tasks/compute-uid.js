@@ -1,14 +1,14 @@
-// npx hardhat compute-uid 
+// npx hardhat compute-uid --schema <SCHEMA_TEXT> 
 const { types } = require("hardhat/config");
 
 task("compute-uid", "Computes the UID for a given schema")
     .addParam("schema", "The schema string")
-    .addOptionalParam("resolver", "The resolver address", "0x0000000000000000000000000000000000000000", types.string)
+    .addOptionalParam("resolverAddress", "The resolver address", "0x0000000000000000000000000000000000000000", types.string)
     .addOptionalParam("revocable", "Revocable boolean", false, types.boolean)
     .setAction(async (taskArgs, hre) => {
         const { ethers } = require("ethers");
         const colors = require('colors');
-        const isValidAddress = ethers.isAddress(taskArgs.resolver);
+        const isValidAddress = ethers.isAddress(taskArgs.resolverAddress);
         if (!isValidAddress) {
             console.error('Invalid resolver address.');
         }
@@ -16,7 +16,7 @@ task("compute-uid", "Computes the UID for a given schema")
         const computeUID = () => {
             const encoded = ethers.solidityPacked(
                 ["string", "address", "bool"],
-                [taskArgs.schema, taskArgs.resolver, taskArgs.revocable]
+                [taskArgs.schema, taskArgs.resolverAddress, taskArgs.revocable]
             );
             return ethers.keccak256(encoded);
         };
