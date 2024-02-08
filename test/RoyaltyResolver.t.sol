@@ -1,5 +1,6 @@
 // source .env & forge test --match-path test/RoyaltyResolver.t.sol -vvvv --fork-url $SEPOLIA_RPC_URL --via-ir
 // SPDX-License-Identifier: UNLICENSED
+// solhint-disable func-name-mixedcase, var-name-mixedcase
 pragma solidity ^0.8.19;
 import "forge-std/console.sol";
 import {Test, console2} from "forge-std/Test.sol";
@@ -17,11 +18,11 @@ contract RoyaltyResolverTest is Test {
     ISchemaRegistry public schemaRegistry;
 
     // Variables
-    address Alice = address(1);
-    address Bob = address(2);
-    address Carla = address(3);
-    bytes32[] private registeredSchemaUIDs;
-    uint256 ROYALTY_PERCENTAGE = 10;
+    address public Alice = address(1);
+    address public Bob = address(2);
+    address public Carla = address(3);
+    bytes32[] public registeredSchemaUIDs;
+    uint256 public ROYALTY_PERCENTAGE = 10;
 
     struct CustomAttestationSchema {
         bytes32[] citationUID; // An array of citation UIDs
@@ -41,7 +42,7 @@ contract RoyaltyResolverTest is Test {
         registerSchema();
     }
 
-    function testAssertContractsDeployed() public {
+    function test_AssertContractsDeployed() public {
         assertTrue(address(eas) != address(0), "EAS contract not deployed");
         assertTrue(
             address(authorStake) != address(0),
@@ -57,6 +58,138 @@ contract RoyaltyResolverTest is Test {
         );
     }
 
+    // Testing custom errors
+    function test_InsufficientEthValueForEAS() public {
+        AttestationRequest memory request = generateAttestationRequest(
+            Alice,
+            new bytes32[](0),
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            1 ether
+        );
+        vm.deal(Alice, 1 ether);
+        vm.prank(Alice);
+
+        vm.expectRevert(EAS.InsufficientValue.selector);
+        // Sending less ether than required
+        eas.attest{value: 0}(request);
+    }
+
+    function test_InsufficientEthValueSentForRoyaltyResolver() public {
+        AttestationRequest memory request = generateAttestationRequest(
+            Alice,
+            new bytes32[](0),
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            // sending 0 value
+            0
+        );
+        vm.prank(Alice);
+        vm.deal(Alice, 1 ether);
+        vm.expectRevert(RoyaltyResolver.InsufficientEthValueSent.selector);
+        eas.attest{value: 0}(request);
+    }
+
+    function test_InvalidCitationUID() public {
+        bytes32 invalidCitationUID = keccak256("clearlyInvalidUID");
+
+        bytes32[] memory citationUIDs = new bytes32[](1);
+        // Invalid UID
+        citationUIDs[0] = invalidCitationUID;
+        uint256 stakeValue = 0.5 ether;
+        AttestationRequest memory request = generateAttestationRequest(
+            Alice,
+            citationUIDs,
+            bytes32("authorName"),
+            "Article Title",
+            bytes32("articleHash"),
+            "http://example.com",
+            stakeValue
+        );
+
+        vm.deal(Alice, 1 ether);
+        vm.prank(Alice);
+        vm.expectRevert(RoyaltyResolver.InvalidCitationUID.selector);
+        eas.attest{value: stakeValue}(request);
+    }
+
+    function test_DirectPaymentsNotAllowed() public {
+        // Send ETH directly to the contract without calling a function and expect revert
+        vm.deal(Alice, 1 ether);
+        vm.prank(Alice);
+
+        vm.expectRevert(RoyaltyResolver.DirectPaymentsNotAllowed.selector);
+        address(royaltyResolver).call{value: 1 ether}("");
+    }
+
+    // creates multiple attestations without citations
+    function test_MultipleAttestationsWithoutCitations() public {
+        uint256 numberOfAttestations = 5; // Arbitrary number for test
+        uint256 stakeValue = 0.5 ether;
+
+        // Create multiple attestations without citations
+        for (uint i = 0; i < numberOfAttestations; i++) {
+            // generate random attester address: don't use 0 since it will be reverted
+            address attesterAddress = address(uint160(i) + 1);
+            createAttestationWithoutCitation(attesterAddress, stakeValue);
+        }
+    }
+
+    // creates multiple attestations with citation
+    function test_MultipleAttestationsWithCitation() public {
+        // Number of attestations to create, with each citing the previous
+        uint256 numberOfCitations = 5;
+        uint256 stakeValue = 1 ether;
+
+        bytes32[] memory citationUIDs = new bytes32[](1);
+        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address
+        citationUIDs[0] = createAttestationWithoutCitation(
+            initialAttester,
+            stakeValue
+        );
+
+        // Create subsequent attestations, each citing the previous one
+        for (uint i = 0; i < numberOfCitations; i++) {
+            // generate random attester address: don't use 0 since it will be reverted
+            address attesterAddress = address(uint160(i + 100));
+            // Each new attestation cites the last registered attestation
+            citationUIDs[0] = createAttestationWithCitation(
+                attesterAddress,
+                citationUIDs,
+                stakeValue
+            );
+        }
+    }
+
+    // creates an attestation with multiple citations
+    function test_AttestationsWithMultipleCitations() public {
+        uint256 numberOfAttestations = 5; // Arbitrary number for test
+        uint256 stakeValue = 0.5 ether;
+        bytes32[] memory citationUIDs = new bytes32[](numberOfAttestations);
+
+        // Create multiple attestations without citations
+        for (uint i = 0; i < numberOfAttestations; i++) {
+            // generate random attester address: don't use 0 since it will be reverted
+            address attester = address(uint160(i + 200));
+            citationUIDs[i] = createAttestationWithoutCitation(
+                attester,
+                stakeValue
+            );
+        }
+        uint256 stakeValueForMultipleCitations = 1 ether;
+        // create attestation with 5 citations
+        createAttestationWithCitation(
+            Bob,
+            citationUIDs,
+            stakeValueForMultipleCitations
+        );
+    }
+
+    //// helper functions
     function registerSchema() public {
         string
             memory schema = "bytes32[] citationUID bytes32 authorName string articleTitle bytes32 articleHash string urlOfContent";
@@ -97,7 +230,6 @@ contract RoyaltyResolverTest is Test {
         string memory urlOfContent,
         uint256 stakeValue
     ) public view returns (AttestationRequest memory) {
-        // attest(AttestationRequest calldata request)
         uint64 timeToExpire = 0;
         bool revocable = false;
         // encode data
@@ -109,7 +241,7 @@ contract RoyaltyResolverTest is Test {
             urlOfContent
         );
 
-        // Create an instance of AttestationRequestData with hardcoded values
+        // Create a struct of AttestationRequestData with hardcoded values
         AttestationRequestData memory requestData = AttestationRequestData({
             recipient: attesterAddress,
             expirationTime: timeToExpire,
@@ -149,73 +281,6 @@ contract RoyaltyResolverTest is Test {
         }
         expectedStakingAmount = stakeValue - totalRoyalty;
         return (totalRoyalty, individualRoyalty, expectedStakingAmount);
-    }
-
-    // Testing custom errors
-    function testInsufficientEthValueForEAS() public {
-        AttestationRequest memory request = generateAttestationRequest(
-            Alice,
-            new bytes32[](0),
-            bytes32("authorName"),
-            "Article Title",
-            bytes32("articleHash"),
-            "http://example.com",
-            1 ether
-        );
-        vm.deal(Alice, 1 ether);
-        vm.prank(Alice);
-
-        vm.expectRevert(EAS.InsufficientValue.selector);
-        // Sending less ether than required
-        eas.attest{value: 0}(request);
-    }
-
-    function testInsufficientEthValueSentForRoyaltyResolver() public {
-        AttestationRequest memory request = generateAttestationRequest(
-            Alice,
-            new bytes32[](0),
-            bytes32("authorName"),
-            "Article Title",
-            bytes32("articleHash"),
-            "http://example.com",
-            // sending 0 value
-            0
-        );
-        vm.prank(Alice);
-        vm.deal(Alice, 1 ether);
-        vm.expectRevert(RoyaltyResolver.InsufficientEthValueSent.selector);
-        eas.attest{value: 0}(request);
-    }
-
-    function testInvalidCitationUID() public {
-        bytes32 invalidCitationUID = keccak256("clearlyInvalidUID");
-
-        bytes32[] memory citationUIDs = new bytes32[](1);
-        // Invalid UID
-        citationUIDs[0] = invalidCitationUID;
-        uint256 stakeValue = 0.5 ether;
-        AttestationRequest memory request = generateAttestationRequest(
-            Alice,
-            citationUIDs,
-            bytes32("authorName"),
-            "Article Title",
-            bytes32("articleHash"),
-            "http://example.com",
-            stakeValue
-        );
-
-        vm.prank(Alice);
-        vm.expectRevert();
-        eas.attest{value: stakeValue}(request);
-    }
-
-    function testDirectPaymentsNotAllowed() public {
-        // Send ETH directly to the contract without calling a function and expect revert
-        vm.deal(Alice, 1 ether);
-        vm.prank(Alice);
-
-        vm.expectRevert(RoyaltyResolver.DirectPaymentsNotAllowed.selector);
-        address(royaltyResolver).call{value: 1 ether}("");
     }
 
     // helper function creates attestation without any citations
@@ -346,68 +411,5 @@ contract RoyaltyResolverTest is Test {
             );
         }
         return attestationUID;
-    }
-
-    // creates multiple attestations without citations
-    function testMultipleAttestationsWithoutCitations() public {
-        uint256 numberOfAttestations = 5; // Arbitrary number for test
-        uint256 stakeValue = 0.5 ether;
-
-        // Create multiple attestations without citations
-        for (uint i = 0; i < numberOfAttestations; i++) {
-            // generate random attester address: don't use 0 since it will be reverted
-            address attesterAddress = address(uint160(i) + 1);
-            createAttestationWithoutCitation(attesterAddress, stakeValue);
-        }
-    }
-
-    // creates multiple attestations with citation
-    function testMultipleAttestationsWithCitation() public {
-        // Number of attestations to create, with each citing the previous
-        uint256 numberOfCitations = 5;
-        uint256 stakeValue = 1 ether;
-
-        bytes32[] memory citationUIDs = new bytes32[](1);
-        address initialAttester = address(uint160(numberOfCitations + 1)); // Use a unique address
-        citationUIDs[0] = createAttestationWithoutCitation(
-            initialAttester,
-            stakeValue
-        );
-
-        // Create subsequent attestations, each citing the previous one
-        for (uint i = 0; i < numberOfCitations; i++) {
-            // generate random attester address: don't use 0 since it will be reverted
-            address attesterAddress = address(uint160(i + 100));
-            // Each new attestation cites the last registered attestation
-            citationUIDs[0] = createAttestationWithCitation(
-                attesterAddress,
-                citationUIDs,
-                stakeValue
-            );
-        }
-    }
-
-    // creates an attestation with multiple citations
-    function testAttestationsWithMultipleCitations() public {
-        uint256 numberOfAttestations = 5; // Arbitrary number for test
-        uint256 stakeValue = 0.5 ether;
-        bytes32[] memory citationUIDs = new bytes32[](numberOfAttestations);
-
-        // Create multiple attestations without citations
-        for (uint i = 0; i < numberOfAttestations; i++) {
-            // generate random attester address: don't use 0 since it will be reverted
-            address attester = address(uint160(i + 200));
-            citationUIDs[i] = createAttestationWithoutCitation(
-                attester,
-                stakeValue
-            );
-        }
-        uint256 stakeValueForMultipleCitations = 1 ether;
-        // create attestation with 5 citations
-        createAttestationWithCitation(
-            Bob,
-            citationUIDs,
-            stakeValueForMultipleCitations
-        );
     }
 }
