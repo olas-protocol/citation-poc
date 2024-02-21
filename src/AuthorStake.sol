@@ -13,15 +13,6 @@ contract AuthorStake is ReentrancyGuard {
     event EtherStaked(address indexed from, uint256 amount);
     event EtherWithdrawn(address indexed to, uint256 amount);
 
-    // Modifier to check if the caller has enough staked balance.
-    modifier hasSufficientStake(uint256 amount) {
-        require(
-            stakes[msg.sender] >= amount,
-            "Insufficient staked amount to withdraw specified amount"
-        );
-        _;
-    }
-
     function stakeEtherFrom(address staker) public payable nonReentrant {
         require(msg.value > 0, "Must send Ether to stake");
         stakes[staker] += msg.value;
@@ -29,10 +20,13 @@ contract AuthorStake is ReentrancyGuard {
     }
 
     // Allows users to withdraw their staked Ether.
-    function withdrawStake(
-        uint256 amount
-    ) external nonReentrant hasSufficientStake(amount) {
+    function withdrawStake(uint256 amount) external nonReentrant {
+        require(
+            stakes[msg.sender] >= amount,
+            "Insufficient staked amount to withdraw specified amount"
+        );
         require(amount > 0, "Withdrawal amount must be greater than 0");
+
         stakes[msg.sender] -= amount;
         Address.sendValue(payable(msg.sender), amount); // Safer Ether transfer
         emit EtherWithdrawn(msg.sender, amount);
