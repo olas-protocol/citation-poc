@@ -5,26 +5,9 @@ import {Test, console2} from "forge-std/Test.sol";
 import {AuthorStake} from "../src/AuthorStake.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract AttackContract {
-    AuthorStake public target;
-
-    constructor(AuthorStake _target) {
-        target = _target;
-    }
-
-    // Fallback function used to perform the attack
-    fallback() external payable {
-        target.withdrawStake(1 ether);
-    }
-
-    function attack() external payable {
-        target.stakeEtherFrom{value: msg.value}(address(this));
-        target.withdrawStake(1 ether);
-    }
-}
-
 contract AuthorStakingContractTest is Test {
     AuthorStake public stakingContract;
+    // The attacker contract to test reentrancy attack
     AttackContract public attacker;
 
     event EtherStaked(address indexed from, uint256 amount);
@@ -37,12 +20,12 @@ contract AuthorStakingContractTest is Test {
 
     function testReentrancyAttack() public {
         vm.deal(address(attacker), 1 ether);
-        
+
         vm.expectRevert();
         attacker.attack{value: 1 ether}();
     }
 
-    function testSuccessfulEtherStaking() public {
+    function testEtherStaking() public {
         address staker = address(1);
         uint256 stakeAmount = 1 ether;
 
@@ -60,7 +43,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testSuccessfulEtherWithdrawal() public {
+    function testEtherWithdrawal() public {
         address staker = address(2);
         uint256 stakeAmount = 1 ether;
         uint256 withdrawAmount = 0.5 ether;
@@ -83,7 +66,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testFailWithdrawalExceedsStakedAmount() public {
+    function testWithdrawalExceedsStakedAmount() public {
         address staker = address(3);
         uint256 stakeAmount = 0.5 ether;
         uint256 withdrawAmount = 1 ether; // Attempt to withdraw more than staked
@@ -94,18 +77,21 @@ contract AuthorStakingContractTest is Test {
         stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
 
         // Attempt to withdraw more than the staked amount should fail
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(
+            "Insufficient staked amount to withdraw specified amount"
+        );
 
         stakingContract.withdrawStake(withdrawAmount);
         vm.stopPrank();
     }
 
-    function testFailWithdrawalWithoutStaking() public {
+    function testWithdrawalWithoutStaking() public {
         address staker = address(9);
-        uint256 withdrawAmount = 0.1 ether;
-
+        uint256 withdrawAmount = 0.5 ether;
         vm.prank(staker);
-        vm.expectRevert(bytes(""));
+        vm.expectRevert(
+            "Insufficient staked amount to withdraw specified amount"
+        );
         stakingContract.withdrawStake(withdrawAmount);
     }
 
@@ -168,26 +154,24 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testFailDirectEtherTransfer() public {
+    function testDirectEtherTransfer() public {
         uint256 transferAmount = 1 ether;
 
-        // Expect revert on direct transfer (if applicable)
-        vm.expectRevert(bytes(""));
         (bool success, ) = address(stakingContract).call{value: transferAmount}(
             ""
         );
-
-        assertTrue(!success, "Direct transfer should fail");
+        // Direct transfer should fail since the contract does not have a receive function
+        assertTrue(success == false, "Direct transfer should fail");
     }
 
-    function testFailStakingZeroEther() public {
+    function testStakingZeroEther() public {
         address staker = address(4);
         uint256 stakeAmount = 0;
 
         vm.deal(staker, 1 ether); // Ensure staker has some ether to cover gas costs
         vm.prank(staker);
 
-        vm.expectRevert(bytes(""));
+        vm.expectRevert("Must send Ether to stake");
         stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
     }
 
@@ -237,107 +221,76 @@ contract AuthorStakingContractTest is Test {
         vm.stopPrank();
     }
 
-    function testFuzzStakeEther(uint256 _amount) public {
-        // Skip the test case if the fuzzed amount is 0 to avoid failing the "Must send Ether to stake" requirement
-        if (_amount == 0) return;
+    function testFuzzStakeAndWithdrawAmounts(
+        uint256 _stakeAmount,
+        uint256 _withdrawAmount
+    ) public {
+        // Ensure there's a non-zero amount to work with, adjusted to avoid excessively large transactions
+        vm.assume(_withdrawAmount > 0);
+        vm.assume(_stakeAmount > 0);
+        vm.assume(_stakeAmount >= _withdrawAmount);
+        address staker = address(1); // random address
 
-        // Ensure the staker has enough Ether to cover the stake.
-        uint256 stakeAmount = _amount % 10 ether; // Example to limit the stake amount for practical testing
+        vm.deal(staker, _stakeAmount);
+        vm.startPrank(staker);
 
-        address staker = address(this);
-        vm.deal(staker, stakeAmount + 1 ether); // Ensure the staker has more than the stake amount
-        vm.prank(staker);
-        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-
+        stakingContract.stakeEtherFrom{value: _stakeAmount}(staker);
         uint256 stakedBalance = stakingContract.getStakedBalance(staker);
         assertEq(
             stakedBalance,
-            stakeAmount,
+            _stakeAmount,
             "Staked amount does not match expected balance"
         );
-    }
 
-    function testFuzzWithdrawalAmounts(uint256 _withdrawAmount) public {
-        // Ensure there's a non-zero amount to work with, adjusted to avoid excessively large transactions
-        uint256 withdrawAmount = (_withdrawAmount % 1 ether) + 1; // Ensure at least 1 wei is withdrawn and cap at 1 ether for practicality
-    
-        address staker = address(this);
-        // Stake an amount slightly larger than the maximum withdrawal amount to ensure coverage
-        uint256 stakeAmount = withdrawAmount + 1; // Ensure stake is sufficient
-    
-        vm.deal(staker, stakeAmount);
-        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-    
-        vm.prank(staker);
-        stakingContract.withdrawStake(withdrawAmount);
-    
+        stakingContract.withdrawStake(_withdrawAmount);
         uint256 remainingBalance = stakingContract.getStakedBalance(staker);
-        assertEq(remainingBalance, stakeAmount - withdrawAmount, "Remaining balance should match expected after withdrawal");
+        assertEq(
+            remainingBalance,
+            _stakeAmount - _withdrawAmount,
+            "Remaining balance should match expected after withdrawal"
+        );
+        vm.stopPrank();
     }
-    
 
     function testStakeEtherForAnotherAddress() public {
         address staker = address(5);
         address beneficiary = address(6);
         uint256 stakeAmount = 1 ether;
-    
+
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
         stakingContract.stakeEtherFrom{value: stakeAmount}(beneficiary);
-    
+
         uint256 stakedBalance = stakingContract.getStakedBalance(beneficiary);
-        assertEq(stakedBalance, stakeAmount, "Beneficiary's staked balance should match the sent amount");
+        assertEq(
+            stakedBalance,
+            stakeAmount,
+            "Beneficiary's staked balance should match the sent amount"
+        );
     }
 
-    function testExactWithdrawal() public {
-        address staker = address(7);
-        uint256 stakeAmount = 1 ether;
-    
-        vm.deal(staker, stakeAmount);
-        vm.prank(staker);
-        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-    
-        vm.prank(staker);
-        stakingContract.withdrawStake(stakeAmount);
-    
-        uint256 remainingBalance = stakingContract.getStakedBalance(staker);
-        assertEq(remainingBalance, 0, "Remaining balance should be zero after exact withdrawal");
-    }    
-    
     function testEventEmissionOnStaking() public {
         address staker = address(10);
         uint256 stakeAmount = 0.4 ether;
-    
+
         // Set up expectations for the event emission
         // The parameters are (bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData)
         // In the case of our events, topic1 will be the staker's address, and data will be the stakeAmount
         vm.expectEmit(true, true, false, true);
         emit EtherStaked(staker, stakeAmount);
-    
+
         // Perform the staking action
         vm.deal(staker, stakeAmount);
         vm.prank(staker);
         stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-    
+
         // The test will fail if the EtherStaked event does not match the expected values
     }
 
-    function testMinimalEtherStake() public {
-        address staker = address(1);
-        uint256 stakeAmount = 1 wei;
-    
-        vm.deal(staker, stakeAmount);
-        vm.prank(staker);
-        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-    
-        uint256 stakedBalance = stakingContract.getStakedBalance(staker);
-        assertEq(stakedBalance, stakeAmount, "Staked balance should match the minimal stake amount");
-    }
-    
     function testGasForStaking() public {
         address staker = address(2);
         uint256 stakeAmount = 1 ether;
-    
+
         vm.deal(staker, stakeAmount);
         vm.startPrank(staker);
         uint256 gasBefore = gasleft();
@@ -345,23 +298,25 @@ contract AuthorStakingContractTest is Test {
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
         vm.stopPrank();
-    
+
         console2.log("Gas used for staking 1 ether:", gasUsed);
     }
-    
-    function testWithdrawalExceedsStakedAmountWithRevertReason() public {
-        address staker = address(3);
-        uint256 stakeAmount = 0.5 ether;
-        uint256 withdrawAmount = 1 ether; // Attempt to withdraw more than staked
-    
-        vm.deal(staker, stakeAmount);
-        vm.startPrank(staker);
-        stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
-    
-        vm.expectRevert("Insufficient staked amount to withdraw specified amount");
-        stakingContract.withdrawStake(withdrawAmount);
-        vm.stopPrank();
+}
+
+contract AttackContract {
+    AuthorStake public target;
+
+    constructor(AuthorStake _target) {
+        target = _target;
     }
 
-    receive() external payable {}
+    // Fallback function used to perform the attack
+    fallback() external payable {
+        target.withdrawStake(1 ether);
+    }
+
+    function attack() external payable {
+        target.stakeEtherFrom{value: msg.value}(address(this));
+        target.withdrawStake(1 ether);
+    }
 }
