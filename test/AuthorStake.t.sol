@@ -18,14 +18,14 @@ contract AuthorStakingContractTest is Test {
         attacker = new AttackContract(stakingContract);
     }
 
-    function testReentrancyAttack() public {
+    function test_ReentrancyAttack() public {
         vm.deal(address(attacker), 1 ether);
 
         vm.expectRevert();
         attacker.attack{value: 1 ether}();
     }
 
-    function testEtherStaking() public {
+    function test_EtherStaking() public {
         address staker = address(1);
         uint256 stakeAmount = 1 ether;
 
@@ -43,7 +43,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testEtherWithdrawal() public {
+    function test_EtherWithdrawal() public {
         address staker = address(2);
         uint256 stakeAmount = 1 ether;
         uint256 withdrawAmount = 0.5 ether;
@@ -66,7 +66,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testWithdrawalExceedsStakedAmount() public {
+    function test_WithdrawalExceedsStakedAmount() public {
         address staker = address(3);
         uint256 stakeAmount = 0.5 ether;
         uint256 withdrawAmount = 1 ether; // Attempt to withdraw more than staked
@@ -85,7 +85,7 @@ contract AuthorStakingContractTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawalWithoutStaking() public {
+    function test_WithdrawalWithoutStaking() public {
         address staker = address(9);
         uint256 withdrawAmount = 0.5 ether;
         vm.prank(staker);
@@ -95,7 +95,7 @@ contract AuthorStakingContractTest is Test {
         stakingContract.withdrawStake(withdrawAmount);
     }
 
-    function testMultipleStakers() public {
+    function test_MultipleStakers() public {
         address staker1 = address(6);
         address staker2 = address(7);
         uint256 stakeAmount1 = 1 ether;
@@ -126,7 +126,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testFullWithdrawalAfterMultipleStakes() public {
+    function test_FullWithdrawalAfterMultipleStakes() public {
         address staker = address(8);
         uint256 firstStakeAmount = 0.5 ether;
         uint256 secondStakeAmount = 0.3 ether;
@@ -154,7 +154,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testDirectEtherTransfer() public {
+    function test_DirectEtherTransfer() public {
         uint256 transferAmount = 1 ether;
 
         (bool success, ) = address(stakingContract).call{value: transferAmount}(
@@ -164,7 +164,7 @@ contract AuthorStakingContractTest is Test {
         assertTrue(success == false, "Direct transfer should fail");
     }
 
-    function testStakingZeroEther() public {
+    function test_StakingZeroEther() public {
         address staker = address(4);
         uint256 stakeAmount = 0;
 
@@ -175,7 +175,7 @@ contract AuthorStakingContractTest is Test {
         stakingContract.stakeEtherFrom{value: stakeAmount}(staker);
     }
 
-    function testStakingAndWithdrawingInLoops() public {
+    function test_StakingAndWithdrawingInLoops() public {
         address staker = address(11);
         uint256 iterations = 5;
         uint256 stakePerIteration = 0.1 ether;
@@ -201,7 +201,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testEventEmissionOnStakingAndWithdrawal() public {
+    function test_EventEmissionOnStakingAndWithdrawal() public {
         address staker = address(10);
         uint256 stakeAmount = 0.4 ether;
         uint256 withdrawAmount = 0.2 ether;
@@ -221,7 +221,7 @@ contract AuthorStakingContractTest is Test {
         vm.stopPrank();
     }
 
-    function testFuzzStakeAndWithdrawAmounts(
+    function testFuzz_StakeAndWithdrawAmounts(
         uint256 _stakeAmount,
         uint256 _withdrawAmount
     ) public {
@@ -252,7 +252,7 @@ contract AuthorStakingContractTest is Test {
         vm.stopPrank();
     }
 
-    function testStakeEtherForAnotherAddress() public {
+    function test_StakeEtherForAnotherAddress() public {
         address staker = address(5);
         address beneficiary = address(6);
         uint256 stakeAmount = 1 ether;
@@ -269,7 +269,7 @@ contract AuthorStakingContractTest is Test {
         );
     }
 
-    function testEventEmissionOnStaking() public {
+    function test_EventEmissionOnStaking() public {
         address staker = address(10);
         uint256 stakeAmount = 0.4 ether;
 
@@ -287,7 +287,7 @@ contract AuthorStakingContractTest is Test {
         // The test will fail if the EtherStaked event does not match the expected values
     }
 
-    function testGasForStaking() public {
+    function test_GasForStaking() public {
         address staker = address(2);
         uint256 stakeAmount = 1 ether;
 
