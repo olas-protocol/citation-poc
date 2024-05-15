@@ -1,1 +1,1 @@
-bash generate_abis.sh
+npm run generate_abis

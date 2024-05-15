@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate_abis": "node script/generate_contract_abis.js"
   },
   "keywords": [],
   "author": "",
