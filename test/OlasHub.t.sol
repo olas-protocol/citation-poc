@@ -6,8 +6,7 @@ pragma solidity ^0.8.19;
 import "forge-std/console.sol";
 import {Test, StdCheats, console} from "forge-std/Test.sol";
 import {RoyaltyResolver} from "../src/RoyaltyResolver.sol";
-import {OlasHub} from "../src/OlasHub.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+//import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {NO_EXPIRATION_TIME, Signature} from "eas-contracts/Common.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -30,21 +29,9 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
 
     RoyaltyResolver public royaltyResolver;
     bytes32 public registeredSchemaUID;
-    OlasHub public olasHub;
     IEAS public eas;
     ISchemaRegistry public schemaRegistry;
     address constant EAS_SEPOLIA_ADDRESS = 0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
-
-    // Enum definitions
-    enum Status {
-        Review,
-        Published
-    }
-
-    enum MarketType {
-        NewsAndOpinion,
-        InvestigativeJournalismAndScientific
-    }
 
     address Alice;
     uint256 AlicePK;
@@ -71,6 +58,8 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
     }
 
     function setUp() public {
+        console.log("chain id");
+        console.logUint(block.chainid);
         // deploy or fetch contracts
         (Alice, AlicePK) = makeAddrAndKey("Alice");
         (Bob, BobPK) = makeAddrAndKey("Bob");
@@ -81,10 +70,6 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
 
         schemaRegistry = eas.getSchemaRegistry();
         registeredSchemaUID = registerSchema();
-        console.log("Registered Schema UID");
-        console.logBytes32(registeredSchemaUID);
-        console.log("Fetched SchemaRegistry address");
-        console.logAddress(address(schemaRegistry));
     }
 
     function test_AssertContractsDeployed() public {
@@ -97,11 +82,12 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
             "string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32[] citationUIDs";
         bool revocable = false;
         bytes32 schemaUID = schemaRegistry.register(schema, ISchemaResolver(address(0)), revocable);
+
         // fetch schema
         SchemaRecord memory schemaRecord = schemaRegistry.getSchema(schemaUID);
         assertEq(schemaRecord.uid, schemaUID, "Schema not registered");
-
         assertEq(schemaRecord.revocable, revocable, "Revocable not set correctly");
+
         // compute UID manually and compare with the returned UID
         bytes32 computedUID = keccak256(abi.encodePacked(schema, address(0), revocable));
         assertEq(schemaUID, computedUID, "UID not computed correctly");
@@ -128,7 +114,7 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         bytes memory encodedData = abi.encode(title, contentUrl, mediaUrl, stakeAmount, royaltyAmount, citationUIDs);
         AttestationRequestData memory requestData = AttestationRequestData({
             recipient: callSigner,
-            expirationTime: NO_EXPIRATION_TIME,
+            expirationTime: deadline,
             revocable: revocable,
             refUID: bytes32(0),
             data: encodedData,
@@ -148,8 +134,6 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
         address signer = ecrecover(digest, v, r, s);
         assertEq(callSigner, signer, "Signer could not be derived from the signature...");
-        console.log("Recovered Signer");
-        console.logAddress(signer);
         //  Signature memory signature = Signature(v, r, s);
         delegatedRequest.signature = EIP712Signature(v, r, s);
 
@@ -159,12 +143,9 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         if (eRecoveredSigner != callSigner) {
             revert("Invalid Signature ECDSA.recover");
         }
-        console.log("eRecoveredSigner");
-        console.logAddress(eRecoveredSigner);
 
         bytes memory signature = abi.encodePacked(r, s, v);
         (address recovered, ECDSA.RecoverError recoverError, bytes32 result) = ECDSA.tryRecover(digest, v, r, s);
-
         assertEq(recovered, callSigner, "Recovered address does not match the signer");
 
         console.log("schemaUID");
@@ -188,10 +169,7 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         console.log("signature.s");
         console.logBytes32(s);
 
-        //eas.attestByDelegation{value: 0}(delegatedRequest);
-
-        //AttestationRequest memory sendRequest = AttestationRequest({schema: registeredSchemaUID, data: requestData});
-        //eas.attest(sendRequest);
+        eas.attestByDelegation(delegatedRequest);
         vm.stopPrank();
     }
 }
