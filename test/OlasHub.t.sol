@@ -19,11 +19,10 @@ import {
     DelegatedAttestationRequest,
     EIP712Signature
 } from "../src/interfaces/eas-v026/IEAS.sol";
-import {EIP712Verifier} from "../src/eip712/EIP712Verifier.sol";
 import {ISchemaRegistry, SchemaRecord} from "../src/interfaces/eas-v026/ISchemaRegistry.sol";
 import {ISchemaResolver} from "../src/interfaces/eas-v026/ISchemaResolver.sol";
 
-contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
+contract OlasHubTest is Test {
     // Contracts
     using ECDSA for bytes32;
 
@@ -32,7 +31,8 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
     IEAS public eas;
     ISchemaRegistry public schemaRegistry;
     address constant EAS_SEPOLIA_ADDRESS = 0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
-
+    bytes32 ATTEST_TYPEHASH;
+    bytes32 DOMAIN_SEPARATOR;
     address Alice;
     uint256 AlicePK;
     address Bob;
@@ -44,8 +44,6 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
     address tester;
 
     bytes32 private constant ATTEST_TYPEHASH_LEGACY = 0xdbfdf8dc2b135c26253e00d5b6cbe6f20457e003fd526d97cea183883570de61;
-    bytes32 private constant ATTEST_TYPEHASH_V1 = 0xf83bb2b0ede93a840239f7e701a54d9bc35f03701f51ae153d601c6947ff3d3f;
-    bytes32 private constant ATTEST_TYPEHASH_V2 = 0xfeb2925a02bae3dae48d424a0437a2b6ac939aa9230ddc55a1a76f065d988076;
 
     struct OlasArticleSchema {
         address user; // Using OlasHub.userProfiles mapping user details can be retrieved
@@ -58,8 +56,6 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
     }
 
     function setUp() public {
-        console.log("chain id");
-        console.logUint(block.chainid);
         // deploy or fetch contracts
         (Alice, AlicePK) = makeAddrAndKey("Alice");
         (Bob, BobPK) = makeAddrAndKey("Bob");
@@ -67,7 +63,8 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         (tester, testerPKey) = makeAddrAndKey("tester");
 
         eas = IEAS(EAS_SEPOLIA_ADDRESS);
-
+        ATTEST_TYPEHASH = eas.getAttestTypeHash();
+        DOMAIN_SEPARATOR = eas.getDomainSeparator();
         schemaRegistry = eas.getSchemaRegistry();
         registeredSchemaUID = registerSchema();
     }
@@ -94,7 +91,21 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         return schemaUID;
     }
 
-    function test_delegatedAttestation() public payable {
+    function testDomainSeparator() public {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                bytes32(0xdbfdf8dc2b135c26253e00d5b6cbe6f20457e003fd526d97cea183883570de61),
+                keccak256(bytes("EAS Attestation")),
+                keccak256(bytes("0.26")),
+                block.chainid,
+                EAS_SEPOLIA_ADDRESS
+            )
+        );
+        console.log("domainSeparator");
+        console.logBytes32(domainSeparator);
+    }
+
+    function test_DelegatedAttestation() public payable {
         // Create a profile
         address callSigner = tester;
         uint256 callSignerPK = testerPKey;
@@ -129,47 +140,48 @@ contract OlasHubTest is Test, EIP712Verifier("1.3.0") {
         });
 
         // Generate the correct signature
-        bytes32 digest = getHashTypedDataV4(delegatedRequest);
-
+        bytes32 structHash = generateStruct(delegatedRequest);
+        bytes32 digest = getTypedHash(structHash, DOMAIN_SEPARATOR);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
-        address signer = ecrecover(digest, v, r, s);
-        assertEq(callSigner, signer, "Signer could not be derived from the signature...");
-        //  Signature memory signature = Signature(v, r, s);
+
+        _verifySignature(digest, EIP712Signature(v, r, s), callSigner);
         delegatedRequest.signature = EIP712Signature(v, r, s);
-
-        _verifyAttest(delegatedRequest);
-
-        address eRecoveredSigner = ECDSA.recover(digest, v, r, s);
-        if (eRecoveredSigner != callSigner) {
-            revert("Invalid Signature ECDSA.recover");
-        }
-
-        bytes memory signature = abi.encodePacked(r, s, v);
-        (address recovered, ECDSA.RecoverError recoverError, bytes32 result) = ECDSA.tryRecover(digest, v, r, s);
-        assertEq(recovered, callSigner, "Recovered address does not match the signer");
-
-        console.log("schemaUID");
-        console.logBytes32(registeredSchemaUID);
-        console.log("recipient");
-        console.logAddress(requestData.recipient);
-        console.log("expirationTime");
-        console.logUint(requestData.expirationTime);
-        console.log("revocable");
-        console.logBool(requestData.revocable);
-        console.log("refUID");
-        console.logBytes32(requestData.refUID);
-        console.log("data");
-        console.logBytes(requestData.data);
-        console.log("value");
-        console.logUint(requestData.value);
-        console.log("signature.v");
-        console.logUint(v);
-        console.log("signature.r");
-        console.logBytes32(r);
-        console.log("signature.s");
-        console.logBytes32(s);
-
-        eas.attestByDelegation(delegatedRequest);
+        bytes32 UID = eas.attestByDelegation(delegatedRequest);
+        Attestation memory attestation = eas.getAttestation(UID);
+        assertEq(attestation.schema, registeredSchemaUID, "Schema not set correctly");
         vm.stopPrank();
+    }
+
+    // HELPER FUNCTIONS
+    function getTypedHash(bytes32 structHash, bytes32 domainSeparator) public view virtual returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+    }
+
+    function generateStruct(DelegatedAttestationRequest memory request) public returns (bytes32) {
+        console.log("EIP712VERIFIER Hashing data......");
+
+        AttestationRequestData memory data = request.data;
+        EIP712Signature memory signature = request.signature;
+
+        uint256 nonce = eas.getNonce(request.attester);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_TYPEHASH_LEGACY,
+                request.schema,
+                data.recipient,
+                data.expirationTime,
+                data.revocable,
+                data.refUID,
+                keccak256(data.data),
+                nonce
+            )
+        );
+        return structHash;
+    }
+
+    function _verifySignature(bytes32 digest, EIP712Signature memory signature, address signer) public view {
+        if (ECDSA.recover(digest, signature.v, signature.r, signature.s) != signer) {
+            revert("Invalid signature");
+        }
     }
 }

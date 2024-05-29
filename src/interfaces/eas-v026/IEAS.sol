@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import { ISchemaRegistry } from "./ISchemaRegistry.sol";
-import { Attestation, EIP712Signature } from "./Types.sol";
+import {ISchemaRegistry} from "./ISchemaRegistry.sol";
+import {Attestation, EIP712Signature} from "./Types.sol";
 
 /**
  * @dev A struct representing the arguments of the attestation request.
@@ -195,9 +195,10 @@ interface IEAS {
      *
      * @return The UID of the new attestation.
      */
-    function attestByDelegation(
-        DelegatedAttestationRequest calldata delegatedRequest
-    ) external payable returns (bytes32);
+    function attestByDelegation(DelegatedAttestationRequest calldata delegatedRequest)
+        external
+        payable
+        returns (bytes32);
 
     /**
      * @dev Attests to multiple schemas.
@@ -240,7 +241,10 @@ interface IEAS {
      *
      * @return The UIDs of the new attestations.
      */
-    function multiAttest(MultiAttestationRequest[] calldata multiRequests) external payable returns (bytes32[] memory);
+    function multiAttest(MultiAttestationRequest[] calldata multiRequests)
+        external
+        payable
+        returns (bytes32[] memory);
 
     /**
      * @dev Attests to multiple schemas using via provided EIP712 signatures.
@@ -283,9 +287,10 @@ interface IEAS {
      *
      * @return The UIDs of the new attestations.
      */
-    function multiAttestByDelegation(
-        MultiDelegatedAttestationRequest[] calldata multiDelegatedRequests
-    ) external payable returns (bytes32[] memory);
+    function multiAttestByDelegation(MultiDelegatedAttestationRequest[] calldata multiDelegatedRequests)
+        external
+        payable
+        returns (bytes32[] memory);
 
     /**
      * @dev Revokes an existing attestation to a specific schema.
@@ -388,9 +393,9 @@ interface IEAS {
      * }])
      *
      */
-    function multiRevokeByDelegation(
-        MultiDelegatedRevocationRequest[] calldata multiDelegatedRequests
-    ) external payable;
+    function multiRevokeByDelegation(MultiDelegatedRevocationRequest[] calldata multiDelegatedRequests)
+        external
+        payable;
 
     /**
      * @dev Timestamps the specified bytes32 data.
@@ -463,4 +468,7 @@ interface IEAS {
      * @return The timestamp the data was timestamped with.
      */
     function getRevokeOffchain(address revoker, bytes32 data) external view returns (uint64);
+    function getNonce(address account) external view returns (uint256);
+    function getAttestTypeHash() external pure returns (bytes32);
+    function getDomainSeparator() external view returns (bytes32);
 }
