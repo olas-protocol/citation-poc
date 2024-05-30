@@ -6,51 +6,77 @@ pragma solidity ^0.8.19;
 import "forge-std/console.sol";
 import {Test, StdCheats, console} from "forge-std/Test.sol";
 import {RoyaltyResolver} from "../src/RoyaltyResolver.sol";
-//import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {OlasHub} from "../src/OlasHub.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {AuthorStake} from "../src/AuthorStake.sol";
 
 import {
-    IEAS,
+    IEAS_V027,
     AttestationRequestData,
     AttestationRequest,
     DelegatedAttestationRequest
-} from "../src/interfaces/IEAS_LEGACY.sol"; // EAS_LEGACY is used for testing the Sepolia contract change that when testing another contract
+} from "../src/interfaces/IEAS.sol"; // EAS_LEGACY is used for testing the Sepolia contract change that when testing another contract
 import {Attestation, NO_EXPIRATION_TIME, Signature} from "eas-contracts/Common.sol";
 
 import {ISchemaRegistry, SchemaRecord} from "eas-contracts/ISchemaRegistry.sol";
+
 import {ISchemaResolver} from "eas-contracts/resolver/ISchemaResolver.sol";
+import {IEAS} from "eas-contracts/IEAS.sol";
 
 contract OlasHubTest is Test {
-    // Contracts
     using ECDSA for bytes32;
+    // Contracts
 
+    IEAS_V027 public eas;
     RoyaltyResolver public royaltyResolver;
-    bytes32 public registeredSchemaUID;
-    IEAS public eas;
+    AuthorStake public authorStake;
     ISchemaRegistry public schemaRegistry;
+    OlasHub public olasHub;
+
     address constant EAS_SEPOLIA_ADDRESS = 0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
     bytes32 ATTEST_TYPEHASH;
     bytes32 DOMAIN_SEPARATOR;
+    bytes32 public registeredSchemaUID;
+
     address Alice;
     uint256 AlicePK;
     address Bob;
     uint256 BobPK;
     address Carla;
     uint256 CarlaPK;
-
     uint256 testerPKey;
     address tester;
 
+    // Struct definitions
+
     struct OlasArticleSchema {
-        address user; // Using OlasHub.userProfiles mapping user details can be retrieved
-        string title; // The title of the article
-        bytes32 contentUrl; // A url pointing to the article content
-        bytes32 mediaUrl; // A url pointing to the media used in the article
-        uint256 stakeAmount; // The total amount of staked ether by the article
-        uint256 royaltyAmount; // The total amount of royalty paid by the article
-        bytes32[] citationUID; // An array of citation UIDs
+        address user;
+        string title;
+        bytes32 contentUrl;
+        bytes32 mediaUrl;
+        uint256 stakeAmount;
+        uint256 royaltyAmount;
+        MarketType typeOfMarket;
+        bytes32[] citationUID;
     }
+
+    // Enum definitions
+    enum MarketType {
+        NewsAndOpinion,
+        InvestigativeJournalismAndScientific
+    }
+
+    // Event definitions
+    event ProfileCreated(
+        uint256 indexed profileId,
+        address indexed userAddress,
+        string userName,
+        string userEmail,
+        string profileImageUrl,
+        uint256 profileCreationTimestamp
+    );
+    event ArticlePublished(bytes32 indexed attestationUID, address indexed attester, uint256 stakeAmount);
 
     function setUp() public {
         // deploy or fetch contracts
@@ -58,18 +84,22 @@ contract OlasHubTest is Test {
         (Bob, BobPK) = makeAddrAndKey("Bob");
         (Carla, CarlaPK) = makeAddrAndKey("Carla");
         (tester, testerPKey) = makeAddrAndKey("tester");
-
-        eas = IEAS(EAS_SEPOLIA_ADDRESS);
+        eas = IEAS_V027(EAS_SEPOLIA_ADDRESS);
+        authorStake = new AuthorStake();
+        royaltyResolver = new RoyaltyResolver(IEAS(EAS_SEPOLIA_ADDRESS), address(authorStake));
         ATTEST_TYPEHASH = eas.getAttestTypeHash();
 
         DOMAIN_SEPARATOR = eas.getDomainSeparator();
         schemaRegistry = eas.getSchemaRegistry();
         registeredSchemaUID = registerSchema();
+        olasHub = new OlasHub(address(eas), registeredSchemaUID);
     }
 
     function test_AssertContractsDeployed() public view {
         assertTrue(address(eas) != address(0), "EAS contract not deployed");
         assertTrue(address(schemaRegistry) != address(0), "SchemaRegistry contract not fetched");
+        assertTrue(address(authorStake) != address(0), "AuthorStake contract not deployed");
+        assertTrue(address(royaltyResolver) != address(0), "RoyaltyResolver contract not deployed");
         assertTrue(registeredSchemaUID != bytes32(0), "Schema not registered");
         assertTrue(ATTEST_TYPEHASH != bytes32(0), "AttestTypeHash not fetched");
         assertTrue(DOMAIN_SEPARATOR != bytes32(0), "DomainSeparator not fetched");
@@ -77,9 +107,10 @@ contract OlasHubTest is Test {
 
     function registerSchema() public returns (bytes32) {
         string memory schema =
-            "string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32[] citationUID";
+            "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID";
+
         bool revocable = false;
-        bytes32 schemaUID = schemaRegistry.register(schema, ISchemaResolver(address(0)), revocable);
+        bytes32 schemaUID = schemaRegistry.register(schema, royaltyResolver, revocable);
 
         // fetch schema
         SchemaRecord memory schemaRecord = schemaRegistry.getSchema(schemaUID);
@@ -87,7 +118,7 @@ contract OlasHubTest is Test {
         assertEq(schemaRecord.revocable, revocable, "Revocable not set correctly");
 
         // compute UID manually and compare with the returned UID
-        bytes32 computedUID = keccak256(abi.encodePacked(schema, address(0), revocable));
+        bytes32 computedUID = keccak256(abi.encodePacked(schema, address(royaltyResolver), revocable));
         assertEq(schemaUID, computedUID, "UID not computed correctly");
         return schemaUID;
     }
@@ -105,18 +136,19 @@ contract OlasHubTest is Test {
         uint256 stakeAmount = 0.1 ether;
         uint256 royaltyAmount = 0.001 ether;
         bytes32[] memory citationUID = new bytes32[](0);
-        uint64 deadline = 0;
+        OlasHub.MarketType typeOfMarket = OlasHub.MarketType.NewsAndOpinion;
         bool revocable = false;
 
-        // string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32[] citationUID
-        bytes memory encodedData = abi.encode(title, contentUrl, mediaUrl, stakeAmount, royaltyAmount, citationUID);
+        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID
+        bytes memory encodedData =
+            abi.encode(callSigner, title, contentUrl, mediaUrl, stakeAmount, royaltyAmount, typeOfMarket, citationUID);
         AttestationRequestData memory requestData = AttestationRequestData({
             recipient: callSigner,
-            expirationTime: deadline,
+            expirationTime: 0,
             revocable: revocable,
             refUID: bytes32(0),
             data: encodedData,
-            value: 0
+            value: stakeAmount
         });
 
         DelegatedAttestationRequest memory delegatedRequest = DelegatedAttestationRequest({
@@ -133,8 +165,28 @@ contract OlasHubTest is Test {
 
         _verifySignature(digest, Signature(v, r, s), callSigner);
         delegatedRequest.signature = Signature(v, r, s);
-        bytes32 UID = eas.attestByDelegation(delegatedRequest);
 
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        // check the attestation from the OlasHub contract
+        assertEq(attestationUID, olasHub.authorArticles(callSigner, 0), "Attestation not stored correctly");
+        // check the attestation from the EAS contract
+        Attestation memory fetchedAttestation = eas.getAttestation(attestationUID);
+
+        assertEq(fetchedAttestation.schema, registeredSchemaUID, "Schema not set correctly");
+        assertEq(fetchedAttestation.recipient, callSigner, "Recipient not set correctly");
+        assertEq(fetchedAttestation.revocable, revocable, "Revocable not set correctly");
+        assertEq(fetchedAttestation.refUID, bytes32(0), "RefUID not set correctly");
+        assertEq(fetchedAttestation.data, encodedData, "Data not set correctly");
         vm.stopPrank();
     }
 
@@ -160,7 +212,6 @@ contract OlasHubTest is Test {
         );
         return structHash;
     }
-    //
 
     function _verifySignature(bytes32 digest, Signature memory signature, address signer) public view {
         if (ECDSA.recover(digest, signature.v, signature.r, signature.s) != signer) {
