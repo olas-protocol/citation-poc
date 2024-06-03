@@ -29,13 +29,19 @@ Setup VScode to use correct formatting
 }
 ```
 ## Contract Libraries
-This project uses OpenZeppelin Contracts [v5.0.0](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.0.0/).
+This project uses OpenZeppelin Contracts [v5.0.0](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.0.0/) - installed as a Foundry submodule dependency.
 
 
 ## Building and Testing with Forge
 This project uses Foundry, for building and testing smart contracts. 
 
-### Building
+### Install Foundry Dependencies
+
+```shell
+forge install
+```
+
+### Build smart contracts
 
 ```shell
 forge build
