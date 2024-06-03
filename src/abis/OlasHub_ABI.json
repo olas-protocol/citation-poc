@@ -1,5 +1,71 @@
 [
   {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_EAS_ADDRESS",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_REGISTERED_SCHEMA_UID",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "EAS_CONTRACT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IEAS_V027"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REGISTERED_SCHEMA_UID",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "authorArticles",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "function",
     "name": "createProfile",
     "inputs": [
@@ -99,26 +165,127 @@
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "publish",
+    "inputs": [
+      {
+        "name": "_signature",
+        "type": "tuple",
+        "internalType": "struct Signature",
+        "components": [
+          {
+            "name": "v",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "r",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "s",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      },
+      {
+        "name": "_author",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_contentUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_mediaUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_stakeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_royaltyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_typeOfMarket",
+        "type": "uint8",
+        "internalType": "enum OlasHub.MarketType"
+      },
+      {
+        "name": "_citationUID",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "event",
+    "name": "ArticlePublished",
+    "inputs": [
+      {
+        "name": "attestationUID",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "attester",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "stakeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "event",
     "name": "ProfileCreated",
     "inputs": [
       {
         "name": "profileId",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
-      },
-      {
-        "name": "userName",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       },
       {
         "name": "userAddress",
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "userName",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       },
       {
         "name": "userEmail",
