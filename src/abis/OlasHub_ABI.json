@@ -3,14 +3,9 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_EAS_ADDRESS",
+        "name": "_EAS_CONTRACT",
         "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_REGISTERED_SCHEMA_UID",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "internalType": "contract IEAS"
       }
     ],
     "stateMutability": "nonpayable"
@@ -23,37 +18,66 @@
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IEAS_V027"
+        "internalType": "contract IEAS"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "REGISTERED_SCHEMA_UID",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "authorArticles",
+    "name": "attestArticle",
     "inputs": [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        "name": "signature",
+        "type": "tuple",
+        "internalType": "struct Signature",
+        "components": [
+          {
+            "name": "v",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "r",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "s",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
       },
       {
-        "name": "",
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "contentUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "mediaUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "stakeAmount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "royaltyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "citationUIDs",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
       }
     ],
     "outputs": [
@@ -63,7 +87,7 @@
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "payable"
   },
   {
     "type": "function",
@@ -243,6 +267,31 @@
   {
     "type": "event",
     "name": "ArticlePublished",
+    "inputs": [
+      {
+        "name": "attestationUID",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "attester",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "stakeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AttestationCreated",
     "inputs": [
       {
         "name": "attestationUID",

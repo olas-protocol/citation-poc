@@ -134,16 +134,16 @@ contract AuthorStakingContractTest is Test {
 
         // First stake
         vm.deal(staker, totalStake);
-        vm.prank(staker);
+
+        vm.startPrank(staker);
         stakingContract.stakeEtherFrom{value: firstStakeAmount}(staker);
 
         // Second stake
-        vm.prank(staker);
         stakingContract.stakeEtherFrom{value: secondStakeAmount}(staker);
 
         // Full withdrawal
-        vm.prank(staker);
         stakingContract.withdrawStake(totalStake);
+        vm.stopPrank();
 
         // Verify the balance is zero after withdrawal
         uint256 remainingBalance = stakingContract.getStakedBalance(staker);
