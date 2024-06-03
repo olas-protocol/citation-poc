@@ -1,5 +1,5 @@
 // npx hardhat create-attestation --schema-uid <SCHEMA-UID> --network <NETWORK_NAME>
-// npx hardhat create-attestation --schema-uid  0x7d1dec25c6e300c1c17628602a902d43bfc1ac38967e248ac528290781f9884a  --network sepolia
+// npx hardhat create-attestation --schema-uid  0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f  --network sepolia
 // NOTE: change data to attest to before running script
 const { types, task } = require("hardhat/config");
 const fs = require('fs');
@@ -55,7 +55,7 @@ task("create-delegated-attestation", "Creates an attestation")
         // NOTE: CHANGE DATA HERE
         const recipient = signer.address;
         const attester = signer.address;
-        const expirationTime = 0;
+        const expirationTime = 0n;
         const revocable = false;
         //const stakeAmount = ethers.parseEther("0.0001");
         const stakeAmount = 0;
@@ -65,6 +65,7 @@ task("create-delegated-attestation", "Creates an attestation")
         const domainSeparator = await eas.getDomainSeparator();
         const attestTypeHash = await eas.getAttestTypeHash();
         const version = await eas.getVersion();
+        const nonce = await eas.getNonce(signer.address);
         console.log(colors.yellow("\nDomain separator:", domainSeparator));
         console.log(colors.yellow("\nAttest type hash:", attestTypeHash));
         console.log(colors.yellow("\nVersion:", version));
@@ -72,9 +73,8 @@ task("create-delegated-attestation", "Creates an attestation")
         const delegated = new Delegated({
             address: EASContractAddress,
             chainId: chainID,
-            version: "0.26",
+            version: version,
         });
-
         console.log(colors.blue("\nCreating onchain attestation..."));
         try {
             console.log(colors.blue("\Signing the attestation..."));
@@ -83,43 +83,27 @@ task("create-delegated-attestation", "Creates an attestation")
                 {
                     schema: taskArgs.schemaUid,
                     recipient: recipient,
-                    expirationTime: 0n,
+                    expirationTime: expirationTime,
                     revocable: revocable,
-                    refUID: '0x0000000000000000000000000000000000000000000000000000000000000000',
+                    refUID: ZERO_BYTES32,
                     data: encodedData,
                     value: stakeAmount,
                     deadline: 0,
-                    nonce: 0n,
+                    nonce: nonce,
                 },
                 signer
             );
-            console.log("Delegated Attestation:", JSON.stringify(delegatedAttestation, replacer, 2));
 
-
-            // Verify the signature
-            const isValidSignature = delegated.verifyDelegatedAttestationSignature(
-                signer.address,
-                delegatedAttestation
-            );
-
-
-            if (!isValidSignature) {
-                throw new Error("Invalid signature!!!!");
-
-            }
-
-
-            console.log("delegatedAttestation", delegatedAttestation);
-
+            //console.log("Delegated Attestation:", JSON.stringify(delegatedAttestation, replacer, 2));
             console.log(colors.blue("\Sending the signed attestation..."));
 
             const tx = await eas.attestByDelegation({
                 schema: taskArgs.schemaUid,
                 data: {
-                    recipient,
-                    expirationTime,
-                    revocable,
-                    data: encodedData,
+                    recipient: delegatedAttestation.message.recipient,
+                    expirationTime: delegatedAttestation.message.expirationTime,
+                    revocable:delegatedAttestation.message.revocable,
+                    data: delegatedAttestation.message.data,
                     value: stakeAmount,
                 },
                 signature: {
@@ -141,7 +125,6 @@ task("create-delegated-attestation", "Creates an attestation")
         } catch (error) {
             console.error(colors.red("\nError creating attestation:", error));
         }
-
 
     });
 

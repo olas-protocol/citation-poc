@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+/**
+ * This interface corresponds to version 0.26 of the EAS contracts.
+ * It must be used when testing the
+ */
 
 pragma solidity ^0.8.0;
 

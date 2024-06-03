@@ -90,7 +90,7 @@ contract OlasHub {
         MarketType _typeOfMarket,
         bytes32[] memory _citationUID
     ) external payable returns (bytes32) {
-        //require(hasProfile(_author), "Profile does not exist");
+        require(hasProfile(_author), "Profile does not exist");
         require(msg.value == _stakeAmount, "Invalid stake amount");
         bytes memory encodedData = abi.encode(
             _author, _title, _contentUrl, _mediaUrl, _stakeAmount, _royaltyAmount, _typeOfMarket, _citationUID
