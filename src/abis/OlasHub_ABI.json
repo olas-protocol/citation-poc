@@ -1,5 +1,95 @@
 [
   {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_EAS_CONTRACT",
+        "type": "address",
+        "internalType": "contract IEAS"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "EAS_CONTRACT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IEAS"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "attestArticle",
+    "inputs": [
+      {
+        "name": "signature",
+        "type": "tuple",
+        "internalType": "struct Signature",
+        "components": [
+          {
+            "name": "v",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "r",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "s",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "contentUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "mediaUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "stakeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "royaltyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "citationUIDs",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
     "type": "function",
     "name": "createProfile",
     "inputs": [
@@ -100,25 +190,50 @@
   },
   {
     "type": "event",
+    "name": "AttestationCreated",
+    "inputs": [
+      {
+        "name": "attestationUID",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "attester",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "stakeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ProfileCreated",
     "inputs": [
       {
         "name": "profileId",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
-      },
-      {
-        "name": "userName",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       },
       {
         "name": "userAddress",
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "userName",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       },
       {
         "name": "userEmail",
