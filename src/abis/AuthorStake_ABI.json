@@ -103,24 +103,19 @@
   },
   {
     "type": "error",
-    "name": "FailedCall",
-    "inputs": []
+    "name": "AddressInsufficientBalance",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
-    "name": "InsufficientBalance",
-    "inputs": [
-      {
-        "name": "balance",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "needed",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
+    "name": "FailedInnerCall",
+    "inputs": []
   },
   {
     "type": "error",
