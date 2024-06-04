@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {IEAS_V027, AttestationRequestData, DelegatedAttestationRequest} from "../src/interfaces/IEAS.sol";
+import {IEAS_V026, AttestationRequestData, DelegatedAttestationRequest} from "../src/interfaces/IEAS.sol";
 import {Signature} from "eas-contracts/Common.sol";
 
 contract OlasHub {
-    // Enum definitions
-    enum MarketType {
-        NewsAndOpinion,
-        InvestigativeJournalismAndScientific
-    }
 
-    // Strunct definitions
+    // Struct definitions
     struct Profile {
         uint256 profileId;
         string userName;
         address userAddress;
         string userEmail;
         string profileImageUrl;
-        uint256 profileCreationTimestamp;
     }
 
     struct OlasArticleSchema {
@@ -28,7 +22,7 @@ contract OlasHub {
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
-        MarketType typeOfMarket;
+        bytes32 typeOfMarket;
         bytes32[] citationUID;
     }
 
@@ -48,11 +42,14 @@ contract OlasHub {
 
     uint256 public profileCount;
 
-    IEAS_V027 public EAS_CONTRACT;
-    bytes32 public REGISTERED_SCHEMA_UID;
+    // Constants
+    IEAS_V026 public immutable EAS_CONTRACT;
+    bytes32 public immutable REGISTERED_SCHEMA_UID;
+    bytes32 public constant NEWS_AND_OPINION = keccak256("NewsAndOpinion"); 
+    bytes32 public constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC = keccak256("InvestigativeJournalismAndScientific");
 
     constructor(address _EAS_ADDRESS, bytes32 _REGISTERED_SCHEMA_UID) {
-        EAS_CONTRACT = IEAS_V027(_EAS_ADDRESS);
+        EAS_CONTRACT = IEAS_V026(_EAS_ADDRESS);
         REGISTERED_SCHEMA_UID = _REGISTERED_SCHEMA_UID;
     }
 
@@ -67,8 +64,7 @@ contract OlasHub {
             userName: _userName,
             userAddress: msg.sender,
             userEmail: _userEmail,
-            profileImageUrl: _profileImageUrl,
-            profileCreationTimestamp: block.timestamp
+            profileImageUrl: _profileImageUrl
         });
 
         emit ProfileCreated(profileCount, msg.sender, _userName, _userEmail, _profileImageUrl, block.timestamp);
@@ -77,8 +73,9 @@ contract OlasHub {
     function hasProfile(address user) public view returns (bool) {
         return profiles[user].userAddress != address(0);
     }
-    // Function to create attestation via OlasHub with delegatecall
 
+    // Function to create delegated attestation request
+    // It can be called by anyone possessing a valid signature and the specified stake value.
     function publish(
         Signature memory _signature,
         address _author,
@@ -87,11 +84,12 @@ contract OlasHub {
         bytes32 _mediaUrl,
         uint256 _stakeAmount,
         uint256 _royaltyAmount,
-        MarketType _typeOfMarket,
+        bytes32 _typeOfMarket,
         bytes32[] memory _citationUID
     ) external payable returns (bytes32) {
         require(hasProfile(_author), "Profile does not exist");
         require(msg.value == _stakeAmount, "Invalid stake amount");
+        require(_typeOfMarket == NEWS_AND_OPINION || _typeOfMarket == INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC, "Invalid market type");
         bytes memory encodedData = abi.encode(
             _author, _title, _contentUrl, _mediaUrl, _stakeAmount, _royaltyAmount, _typeOfMarket, _citationUID
         );

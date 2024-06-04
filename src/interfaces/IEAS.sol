@@ -105,7 +105,7 @@ struct MultiDelegatedRevocationRequest {
 /**
  * @title EAS - Ethereum Attestation Service interface.
  */
-interface IEAS_V027 {
+interface IEAS_V026 {
     /**
      * @dev Emitted when an attestation has been made.
      *

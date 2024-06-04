@@ -8,7 +8,7 @@ import {Test, StdCheats, console} from "forge-std/Test.sol";
 import {RoyaltyResolver} from "../src/RoyaltyResolver.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {IEAS_V027, AttestationRequestData, AttestationRequest, DelegatedAttestationRequest} from "../src/interfaces/IEAS.sol"; // EAS_LEGACY is used for testing the Sepolia contract change that when testing another contract
+import {IEAS_V026, AttestationRequestData, AttestationRequest, DelegatedAttestationRequest} from "../src/interfaces/IEAS.sol"; // EAS_LEGACY is used for testing the Sepolia contract change that when testing another contract
 import {Attestation, NO_EXPIRATION_TIME, Signature} from "eas-contracts/Common.sol";
 import {ISchemaRegistry, SchemaRecord} from "eas-contracts/ISchemaRegistry.sol";
 import {ISchemaResolver} from "eas-contracts/resolver/ISchemaResolver.sol";
@@ -19,18 +19,23 @@ import {OlasHub} from "../src/OlasHub.sol";
 contract OlasHubTest is Test {
     using ECDSA for bytes32;
     // Contracts
-
-    IEAS_V027 public eas;
+    IEAS_V026 public eas;
     RoyaltyResolver public royaltyResolver;
     AuthorStake public authorStake;
     ISchemaRegistry public schemaRegistry;
     OlasHub public olasHub;
 
+    // Constants
+    bytes32 constant NEWS_AND_OPINION = keccak256("NewsAndOpinion"); 
+    bytes32 constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC = keccak256("InvestigativeJournalismAndScientific");
     address constant EAS_SEPOLIA_ADDRESS =
         0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
+
+    // Variables fetched from the EAS contract
     bytes32 ATTEST_TYPEHASH;
     bytes32 DOMAIN_SEPARATOR;
-    bytes32 public registeredSchemaUID;
+
+    bytes32 registeredSchemaUID;
 
     address Alice;
     uint256 AlicePK;
@@ -40,7 +45,6 @@ contract OlasHubTest is Test {
     uint256 CarlaPK;
 
     // Struct definitions
-
     struct OlasArticleSchema {
         address user;
         string title;
@@ -48,15 +52,10 @@ contract OlasHubTest is Test {
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
-        MarketType typeOfMarket;
+        bytes32 typeOfMarket;
         bytes32[] citationUID;
     }
 
-    // Enum definitions
-    enum MarketType {
-        NewsAndOpinion,
-        InvestigativeJournalismAndScientific
-    }
 
     // Event definitions
     event ProfileCreated(
@@ -78,7 +77,7 @@ contract OlasHubTest is Test {
         (Alice, AlicePK) = makeAddrAndKey("Alice");
         (Bob, BobPK) = makeAddrAndKey("Bob");
         (Carla, CarlaPK) = makeAddrAndKey("Carla");
-        eas = IEAS_V027(EAS_SEPOLIA_ADDRESS);
+        eas = IEAS_V026(EAS_SEPOLIA_ADDRESS);
         authorStake = new AuthorStake();
         royaltyResolver = new RoyaltyResolver(
             IEAS(EAS_SEPOLIA_ADDRESS),
@@ -116,7 +115,7 @@ contract OlasHubTest is Test {
 
     function registerSchema() public returns (bytes32) {
         string
-            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID";
+            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
 
         bool revocable = false;
         bytes32 schemaUID = schemaRegistry.register(
@@ -163,8 +162,7 @@ contract OlasHubTest is Test {
             string memory retrievedUserName,
             address userAddress,
             string memory retrievedUserEmail,
-            string memory retrievedProfileImageUrl,
-            uint256 profileCreationTimestamp
+            string memory retrievedProfileImageUrl
         ) = olasHub.profiles(callSigner);
         assertEq(retrievedUserName, userName, "User name should match");
         assertEq(retrievedUserEmail, userEmail, "User email should match");
@@ -198,10 +196,10 @@ contract OlasHubTest is Test {
         uint256 stakeAmount = 0.1 ether;
         uint256 royaltyAmount = 0.001 ether;
         bytes32[] memory citationUID = new bytes32[](0);
-        OlasHub.MarketType typeOfMarket = OlasHub.MarketType.NewsAndOpinion;
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
         bool revocable = false;
 
-        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID
+        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
         bytes memory encodedData = abi.encode(
             callSigner,
             title,
@@ -318,7 +316,7 @@ contract OlasHubTest is Test {
         bytes32 digest,
         Signature memory signature,
         address signer
-    ) public view {
+    ) public pure {
         if (
             ECDSA.recover(digest, signature.v, signature.r, signature.s) !=
             signer

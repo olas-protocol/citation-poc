@@ -1,5 +1,5 @@
-// npx hardhat create-attestation --schema-uid <SCHEMA-UID> --network <NETWORK_NAME>
-// npx hardhat create-attestation --schema-uid  0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f  --network sepolia
+// npx hardhat create-delegated-attestation --schema-uid <SCHEMA-UID> --network <NETWORK_NAME>
+// npx hardhat create-delegated-attestation --schema-uid  0x9addf9af47c748b2992b870a7e8c395f425ccd961289b5ac9638eab48e9a137c  --network sepolia
 // NOTE: change data to attest to before running script
 const { types, task } = require("hardhat/config");
 const fs = require('fs');
@@ -14,6 +14,10 @@ task("create-delegated-attestation", "Creates an attestation")
         const chainID = network.config.chainId;
         const accounts = await hre.ethers.getSigners();
         const signer = accounts[0];
+
+        // bytes32 market types 
+        const NEWS_AND_OPINION = ethers.keccak256(ethers.toUtf8Bytes("NewsAndOpinion"));
+        const INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC = ethers.keccak256(ethers.toUtf8Bytes("InvestigativeJournalismAndScientific"));
 
         console.log(colors.blue("\nNetwork:", networkName));
         console.log(colors.blue("\Chain ID:", chainID));
@@ -33,23 +37,29 @@ task("create-delegated-attestation", "Creates an attestation")
             return;
         }
 
+
+
         // initialize schemaEncoder with schema string
         const schemaEncoder = new SchemaEncoder(fetchedSchema.schema);
         // NOTE: CHANGE DATA HERE
-        // custom attestation data
+        // Custom attestation data
+        
         const dataToAttest = [
+            { name: "user", value: signer.address, type: "address" },
+            { name: "title", value: "Why GM is new hello?!!", type: "string" },
+            { name: "contentUrl", value:  ethers.encodeBytes32String("random content url"), type: "bytes32" },
+            { name: "mediaUrl", value:  ethers.encodeBytes32String("random media url"), type: "bytes32" },
+            { name: "stakeAmount", value: 0, type: "uint256" },
+            { name: "royaltyAmount", value: 0, type: "uint256" },
+            { name: "typeOfMarket", value: NEWS_AND_OPINION, type: "bytes32" },
             {
                 name: "citationUID", value: [
                     ethers.encodeBytes32String("exampleUID1"),
                     ethers.encodeBytes32String("exampleUID2")
                 ], type: "bytes32[]"
-            },
-            { name: "authorName", value: "OBob", type: "bytes32" },
-            { name: "articleTitle", value: 'Why GM is new hello?!!', type: "string" },
-            { name: "articleHash", value: 'random hash!!', type: "bytes32" },
-            { name: "urlOfContent", value: "our-url-1", type: "string" }
+            }
         ]
-
+        
 
         // main schema details
         // NOTE: CHANGE DATA HERE

@@ -18,14 +18,8 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
-        MarketType typeOfMarket;
+        bytes32 typeOfMarket;
         bytes32[] citationUID;
-    }
-
-    // Enum definitions
-    enum MarketType {
-        NewsAndOpinion,
-        InvestigativeJournalismAndScientific
     }
 
     using Address for address payable;
@@ -62,9 +56,9 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
-            MarketType typeOfMarket,
+            bytes32 typeOfMarket,
             bytes32[] memory citationUID
-        ) = abi.decode(data, (address, string, bytes32, bytes32, uint256, uint256, MarketType, bytes32[]));
+        ) = abi.decode(data, (address, string, bytes32, bytes32, uint256, uint256, bytes32, bytes32[]));
 
         return OlasArticleSchema({
             user: user,
