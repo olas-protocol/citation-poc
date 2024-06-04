@@ -13,7 +13,7 @@ nvm use 16.14.0
 npm install
 ```
 
-Install VSCode extensions - NomicFoundation.hardhat-solidity
+Install VSCode extensions - JuanBlanco.solidity
 
 Setup VScode to use correct formatting
     - Create `settings.json` inside `.vscode` folder and add following
@@ -21,7 +21,7 @@ Setup VScode to use correct formatting
 {
     "[solidity]": {
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
+        "editor.defaultFormatter": "JuanBlanco.solidity"
     },
     "[javascript]": {
         "editor.formatOnSave": true,

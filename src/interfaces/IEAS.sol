@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * This interface corresponds to version 0.26 of the EAS contracts.
- * It must be used when testing the
+ * This interface corresponds to version 0.26 of the EAS contracts - and is used by us in the
+ * interim until EAS ugrades their contracts on Sepolia.
  */
 
 pragma solidity ^0.8.0;
@@ -114,7 +114,12 @@ interface IEAS_V026 {
      * @param uid The UID the revoked attestation.
      * @param schema The UID of the schema.
      */
-    event Attested(address indexed recipient, address indexed attester, bytes32 uid, bytes32 indexed schema);
+    event Attested(
+        address indexed recipient,
+        address indexed attester,
+        bytes32 uid,
+        bytes32 indexed schema
+    );
 
     /**
      * @dev Emitted when an attestation has been revoked.
@@ -124,7 +129,12 @@ interface IEAS_V026 {
      * @param schema The UID of the schema.
      * @param uid The UID the revoked attestation.
      */
-    event Revoked(address indexed recipient, address indexed attester, bytes32 uid, bytes32 indexed schema);
+    event Revoked(
+        address indexed recipient,
+        address indexed attester,
+        bytes32 uid,
+        bytes32 indexed schema
+    );
 
     /**
      * @dev Emitted when a data has been timestamped.
@@ -141,7 +151,11 @@ interface IEAS_V026 {
      * @param data The data.
      * @param timestamp The timestamp.
      */
-    event RevokedOffchain(address indexed revoker, bytes32 indexed data, uint64 indexed timestamp);
+    event RevokedOffchain(
+        address indexed revoker,
+        bytes32 indexed data,
+        uint64 indexed timestamp
+    );
 
     /**
      * @dev Returns the address of the global schema registry.
@@ -171,7 +185,9 @@ interface IEAS_V026 {
      *
      * @return The UID of the new attestation.
      */
-    function attest(AttestationRequest calldata request) external payable returns (bytes32);
+    function attest(
+        AttestationRequest calldata request
+    ) external payable returns (bytes32);
 
     /**
      * @dev Attests to a specific schema via the provided EIP712 signature.
@@ -200,10 +216,9 @@ interface IEAS_V026 {
      *
      * @return The UID of the new attestation.
      */
-    function attestByDelegation(DelegatedAttestationRequest calldata delegatedRequest)
-        external
-        payable
-        returns (bytes32);
+    function attestByDelegation(
+        DelegatedAttestationRequest calldata delegatedRequest
+    ) external payable returns (bytes32);
 
     /**
      * @dev Attests to multiple schemas.
@@ -246,10 +261,9 @@ interface IEAS_V026 {
      *
      * @return The UIDs of the new attestations.
      */
-    function multiAttest(MultiAttestationRequest[] calldata multiRequests)
-        external
-        payable
-        returns (bytes32[] memory);
+    function multiAttest(
+        MultiAttestationRequest[] calldata multiRequests
+    ) external payable returns (bytes32[] memory);
 
     /**
      * @dev Attests to multiple schemas using via provided EIP712 signatures.
@@ -292,10 +306,9 @@ interface IEAS_V026 {
      *
      * @return The UIDs of the new attestations.
      */
-    function multiAttestByDelegation(MultiDelegatedAttestationRequest[] calldata multiDelegatedRequests)
-        external
-        payable
-        returns (bytes32[] memory);
+    function multiAttestByDelegation(
+        MultiDelegatedAttestationRequest[] calldata multiDelegatedRequests
+    ) external payable returns (bytes32[] memory);
 
     /**
      * @dev Revokes an existing attestation to a specific schema.
@@ -335,7 +348,9 @@ interface IEAS_V026 {
      *
      * @param delegatedRequest The arguments of the delegated revocation request.
      */
-    function revokeByDelegation(DelegatedRevocationRequest calldata delegatedRequest) external payable;
+    function revokeByDelegation(
+        DelegatedRevocationRequest calldata delegatedRequest
+    ) external payable;
 
     /**
      * @dev Revokes existing attestations to multiple schemas.
@@ -364,7 +379,9 @@ interface IEAS_V026 {
      *     },
      * }])
      */
-    function multiRevoke(MultiRevocationRequest[] calldata multiRequests) external payable;
+    function multiRevoke(
+        MultiRevocationRequest[] calldata multiRequests
+    ) external payable;
 
     /**
      * @dev Revokes existing attestations to multiple schemas via provided EIP712 signatures.
@@ -398,9 +415,9 @@ interface IEAS_V026 {
      * }])
      *
      */
-    function multiRevokeByDelegation(MultiDelegatedRevocationRequest[] calldata multiDelegatedRequests)
-        external
-        payable;
+    function multiRevokeByDelegation(
+        MultiDelegatedRevocationRequest[] calldata multiDelegatedRequests
+    ) external payable;
 
     /**
      * @dev Timestamps the specified bytes32 data.
@@ -436,7 +453,9 @@ interface IEAS_V026 {
      *
      * @return The timestamp the data was revoked with.
      */
-    function multiRevokeOffchain(bytes32[] calldata data) external returns (uint64);
+    function multiRevokeOffchain(
+        bytes32[] calldata data
+    ) external returns (uint64);
 
     /**
      * @dev Returns an existing attestation by UID.
@@ -445,7 +464,9 @@ interface IEAS_V026 {
      *
      * @return The attestation data members.
      */
-    function getAttestation(bytes32 uid) external view returns (Attestation memory);
+    function getAttestation(
+        bytes32 uid
+    ) external view returns (Attestation memory);
 
     /**
      * @dev Checks whether an attestation exists.
@@ -472,7 +493,10 @@ interface IEAS_V026 {
      *
      * @return The timestamp the data was timestamped with.
      */
-    function getRevokeOffchain(address revoker, bytes32 data) external view returns (uint64);
+    function getRevokeOffchain(
+        address revoker,
+        bytes32 data
+    ) external view returns (uint64);
     function getNonce(address account) external view returns (uint256);
     function getAttestTypeHash() external pure returns (bytes32);
     function getDomainSeparator() external view returns (bytes32);

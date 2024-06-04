@@ -5,7 +5,6 @@ import {IEAS_V026, AttestationRequestData, DelegatedAttestationRequest} from "..
 import {Signature} from "eas-contracts/Common.sol";
 
 contract OlasHub {
-
     // Struct definitions
     struct Profile {
         uint256 profileId;
@@ -35,9 +34,14 @@ contract OlasHub {
         string profileImageUrl,
         uint256 profileCreationTimestamp
     );
-    event ArticlePublished(bytes32 indexed attestationUID, address indexed attester, uint256 stakeAmount);
+    event ArticlePublished(
+        bytes32 indexed attestationUID,
+        address indexed attester,
+        uint256 stakeAmount
+    );
 
     mapping(address => Profile) public profiles;
+    // mapping of author address to array of attestation UIDs
     mapping(address => bytes32[]) public authorArticles;
 
     uint256 public profileCount;
@@ -45,18 +49,24 @@ contract OlasHub {
     // Constants
     IEAS_V026 public immutable EAS_CONTRACT;
     bytes32 public immutable REGISTERED_SCHEMA_UID;
-    bytes32 public constant NEWS_AND_OPINION = keccak256("NewsAndOpinion"); 
-    bytes32 public constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC = keccak256("InvestigativeJournalismAndScientific");
+    bytes32 public constant NEWS_AND_OPINION = keccak256("NewsAndOpinion");
+    bytes32 public constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC =
+        keccak256("InvestigativeJournalismAndScientific");
 
     constructor(address _EAS_ADDRESS, bytes32 _REGISTERED_SCHEMA_UID) {
         EAS_CONTRACT = IEAS_V026(_EAS_ADDRESS);
         REGISTERED_SCHEMA_UID = _REGISTERED_SCHEMA_UID;
     }
 
-    function createProfile(string memory _userName, string memory _userEmail, string memory _profileImageUrl)
-        external
-    {
-        require(profiles[msg.sender].userAddress == address(0), "Profile already exists");
+    function createProfile(
+        string memory _userName,
+        string memory _userEmail,
+        string memory _profileImageUrl
+    ) external {
+        require(
+            profiles[msg.sender].userAddress == address(0),
+            "Profile already exists"
+        );
 
         profileCount++;
         profiles[msg.sender] = profiles[msg.sender] = Profile({
@@ -67,7 +77,14 @@ contract OlasHub {
             profileImageUrl: _profileImageUrl
         });
 
-        emit ProfileCreated(profileCount, msg.sender, _userName, _userEmail, _profileImageUrl, block.timestamp);
+        emit ProfileCreated(
+            profileCount,
+            msg.sender,
+            _userName,
+            _userEmail,
+            _profileImageUrl,
+            block.timestamp
+        );
     }
 
     function hasProfile(address user) public view returns (bool) {
@@ -89,9 +106,20 @@ contract OlasHub {
     ) external payable returns (bytes32) {
         require(hasProfile(_author), "Profile does not exist");
         require(msg.value == _stakeAmount, "Invalid stake amount");
-        require(_typeOfMarket == NEWS_AND_OPINION || _typeOfMarket == INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC, "Invalid market type");
+        require(
+            _typeOfMarket == NEWS_AND_OPINION ||
+                _typeOfMarket == INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC,
+            "Invalid market type"
+        );
         bytes memory encodedData = abi.encode(
-            _author, _title, _contentUrl, _mediaUrl, _stakeAmount, _royaltyAmount, _typeOfMarket, _citationUID
+            _author,
+            _title,
+            _contentUrl,
+            _mediaUrl,
+            _stakeAmount,
+            _royaltyAmount,
+            _typeOfMarket,
+            _citationUID
         );
 
         AttestationRequestData memory requestData = AttestationRequestData({
@@ -103,15 +131,18 @@ contract OlasHub {
             value: _stakeAmount
         });
 
-        DelegatedAttestationRequest memory delegatedRequest = DelegatedAttestationRequest({
-            schema: REGISTERED_SCHEMA_UID,
-            data: requestData,
-            signature: _signature,
-            attester: _author
-        });
+        DelegatedAttestationRequest
+            memory delegatedRequest = DelegatedAttestationRequest({
+                schema: REGISTERED_SCHEMA_UID,
+                data: requestData,
+                signature: _signature,
+                attester: _author
+            });
 
         // Call the EAS contract
-        bytes32 attestationUID = EAS_CONTRACT.attestByDelegation{value: _stakeAmount}(delegatedRequest);
+        bytes32 attestationUID = EAS_CONTRACT.attestByDelegation{
+            value: _stakeAmount
+        }(delegatedRequest);
         authorArticles[_author].push(attestationUID);
         emit ArticlePublished(attestationUID, _author, _stakeAmount);
         return attestationUID;

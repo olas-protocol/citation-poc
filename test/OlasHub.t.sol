@@ -26,8 +26,9 @@ contract OlasHubTest is Test {
     OlasHub public olasHub;
 
     // Constants
-    bytes32 constant NEWS_AND_OPINION = keccak256("NewsAndOpinion"); 
-    bytes32 constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC = keccak256("InvestigativeJournalismAndScientific");
+    bytes32 constant NEWS_AND_OPINION = keccak256("NewsAndOpinion");
+    bytes32 constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC =
+        keccak256("InvestigativeJournalismAndScientific");
     address constant EAS_SEPOLIA_ADDRESS =
         0xC2679fBD37d54388Ce493F1DB75320D236e1815e;
 
@@ -55,7 +56,6 @@ contract OlasHubTest is Test {
         bytes32 typeOfMarket;
         bytes32[] citationUID;
     }
-
 
     // Event definitions
     event ProfileCreated(
@@ -113,47 +113,24 @@ contract OlasHubTest is Test {
         );
     }
 
-    function registerSchema() public returns (bytes32) {
-        string
-            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
-
-        bool revocable = false;
-        bytes32 schemaUID = schemaRegistry.register(
-            schema,
-            royaltyResolver,
-            revocable
-        );
-
-        // fetch schema
-        SchemaRecord memory schemaRecord = schemaRegistry.getSchema(schemaUID);
-        assertEq(schemaRecord.uid, schemaUID, "Schema not registered");
-        assertEq(
-            schemaRecord.revocable,
-            revocable,
-            "Revocable not set correctly"
-        );
-
-        // compute UID manually and compare with the returned UID
-        bytes32 computedUID = keccak256(
-            abi.encodePacked(schema, address(royaltyResolver), revocable)
-        );
-        assertEq(schemaUID, computedUID, "UID not computed correctly");
-        return schemaUID;
-    }
     function test_CreateProfile() public {
         address callSigner = Alice;
-        vm.startPrank(callSigner);
-        bool hasProfileBefore = olasHub.hasProfile(callSigner);
         string memory userName = "Alice";
         string memory userEmail = "alice@olas.info";
         string memory profileImageUrl = "http://example.com/alice.jpg";
+
+        vm.startPrank(callSigner);
+
+        // Assert that the profile does not exist before creation
         assertFalse(
-            hasProfileBefore,
+            olasHub.hasProfile(callSigner),
             "Profile should not exist before creation"
         );
+
         olasHub.createProfile(userName, userEmail, profileImageUrl);
+        // Assert that the profile exists after creation
         assertTrue(
-            olasHub.hasProfile(callSigner) == true,
+            olasHub.hasProfile(callSigner),
             "Profile should exist after creation"
         );
 
@@ -164,6 +141,8 @@ contract OlasHubTest is Test {
             string memory retrievedUserEmail,
             string memory retrievedProfileImageUrl
         ) = olasHub.profiles(callSigner);
+
+        // Assert Profile struct data
         assertEq(retrievedUserName, userName, "User name should match");
         assertEq(retrievedUserEmail, userEmail, "User email should match");
         assertEq(
@@ -172,20 +151,23 @@ contract OlasHubTest is Test {
             "Profile image URL should match"
         );
         vm.stopPrank();
-    } 
+    }
+
     function test_DelegatedAttestation() public payable {
-        // Create a profile
+        // Profile details
         address callSigner = Carla;
         uint256 callSignerPK = CarlaPK;
+        string memory userName = "Carla";
+        string memory userEmail = "Carla@olas.info";
+        string memory profileImageUrl = "http://example.com/carla.jpg";
+
         vm.deal(callSigner, 100 ether);
         vm.startPrank(callSigner);
 
         // Create a profile
-        string memory userName = "Carla";
-        string memory userEmail = "Carla@olas.info";
-        string memory profileImageUrl = "http://example.com/carla.jpg";
         olasHub.createProfile(userName, userEmail, profileImageUrl);
 
+        // Article details
         string memory title = "Sample Article";
         bytes32 contentUrl = keccak256(
             abi.encodePacked("http://example.com/content")
@@ -199,6 +181,7 @@ contract OlasHubTest is Test {
         bytes32 typeOfMarket = NEWS_AND_OPINION;
         bool revocable = false;
 
+        // Encoded Attestation custom schema data
         // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
         bytes memory encodedData = abi.encode(
             callSigner,
@@ -210,6 +193,7 @@ contract OlasHubTest is Test {
             typeOfMarket,
             citationUID
         );
+
         AttestationRequestData memory requestData = AttestationRequestData({
             recipient: callSigner,
             expirationTime: 0,
@@ -246,6 +230,7 @@ contract OlasHubTest is Test {
             typeOfMarket,
             citationUID
         );
+
         // check the attestation from the OlasHub contract
         assertEq(
             attestationUID,
@@ -286,6 +271,34 @@ contract OlasHubTest is Test {
     }
 
     // HELPER FUNCTIONS
+    function registerSchema() public returns (bytes32) {
+        string
+            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
+
+        bool revocable = false;
+        bytes32 schemaUID = schemaRegistry.register(
+            schema,
+            royaltyResolver,
+            revocable
+        );
+
+        // fetch schema
+        SchemaRecord memory schemaRecord = schemaRegistry.getSchema(schemaUID);
+        assertEq(schemaRecord.uid, schemaUID, "Schema not registered");
+        assertEq(
+            schemaRecord.revocable,
+            revocable,
+            "Revocable not set correctly"
+        );
+
+        // compute UID manually and compare with the returned UID
+        bytes32 computedUID = keccak256(
+            abi.encodePacked(schema, address(royaltyResolver), revocable)
+        );
+        assertEq(schemaUID, computedUID, "UID not computed correctly");
+        return schemaUID;
+    }
+
     function _getTypedHash(
         bytes32 structHash
     ) public view virtual returns (bytes32) {
