@@ -1,4 +1,1 @@
-bytes32[] citationUID, bytes32 authorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x0fcfaf1c07cd7f659bfb352c7032d20708707b781cac580fe42eb520a645f35f
-bytes32[] citationUID,bytes32 authorName,string articleTitle,bytes32 articleHash,string urlOfContent 0xa26b123fa4d18e87c4efb7d968725da5daa707d5ba6e3c6b22fe25fd56b4fa22
-bytes32[] citationUID, string contributorName, string articleTitle, bytes32 articleHash, string urlOfContent 0x7d1dec25c6e300c1c17628602a902d43bfc1ac38967e248ac528290781f9884a
-address user, string title, bytes32 contentUrl, bytes32 mediaUrl, uint256 stakeAmount, uint256 royaltyAmount, bytes32 typeOfMarket, bytes32[] citationUID 0x9addf9af47c748b2992b870a7e8c395f425ccd961289b5ac9638eab48e9a137c
+address user, string title, bytes32 contentUrl, bytes32 mediaUrl, uint256 stakeAmount, uint256 royaltyAmount, bytes32 typeOfMarket, bytes32[] citationUID 0xf4ea9ac884bca53c4831e8f598bd20ac6f0e57a5572a032f34b1bcf66bc82ba2
