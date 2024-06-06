@@ -69,7 +69,7 @@ contract OlasHub {
         );
 
         profileCount++;
-        profiles[msg.sender] = profiles[msg.sender] = Profile({
+        profiles[msg.sender] = Profile({
             profileId: profileCount,
             userName: _userName,
             userAddress: msg.sender,

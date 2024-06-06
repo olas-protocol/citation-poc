@@ -18,14 +18,18 @@ import {OlasHub} from "../src/OlasHub.sol";
 
 contract OlasHubTest is Test {
     using ECDSA for bytes32;
-    // Contracts
+    /*//////////////////////////////////////////////////////////////
+                               Contracts
+    //////////////////////////////////////////////////////////////*/
     IEAS_V026 public eas;
     RoyaltyResolver public royaltyResolver;
     AuthorStake public authorStake;
     ISchemaRegistry public schemaRegistry;
     OlasHub public olasHub;
 
-    // Constants
+    /*//////////////////////////////////////////////////////////////
+                               Constants
+    //////////////////////////////////////////////////////////////*/
     bytes32 constant NEWS_AND_OPINION = keccak256("NewsAndOpinion");
     bytes32 constant INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC =
         keccak256("InvestigativeJournalismAndScientific");
@@ -57,7 +61,9 @@ contract OlasHubTest is Test {
         bytes32[] citationUID;
     }
 
-    // Event definitions
+    /*//////////////////////////////////////////////////////////////
+                               EVENTS
+    //////////////////////////////////////////////////////////////*/
     event ProfileCreated(
         uint256 indexed profileId,
         address indexed userAddress,
@@ -153,7 +159,7 @@ contract OlasHubTest is Test {
         vm.stopPrank();
     }
 
-    function test_DelegatedAttestation() public payable {
+    function test_Publish() public payable {
         // Profile details
         address callSigner = Carla;
         uint256 callSignerPK = CarlaPK;
@@ -163,9 +169,8 @@ contract OlasHubTest is Test {
 
         vm.deal(callSigner, 100 ether);
         vm.startPrank(callSigner);
-
         // Create a profile
-        olasHub.createProfile(userName, userEmail, profileImageUrl);
+        _createProfile(callSigner, userName, userEmail, profileImageUrl);
 
         // Article details
         string memory title = "Sample Article";
@@ -181,35 +186,18 @@ contract OlasHubTest is Test {
         bytes32 typeOfMarket = NEWS_AND_OPINION;
         bool revocable = false;
 
-        // Encoded Attestation custom schema data
-        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
-        bytes memory encodedData = abi.encode(
-            callSigner,
-            title,
-            contentUrl,
-            mediaUrl,
-            stakeAmount,
-            royaltyAmount,
-            typeOfMarket,
-            citationUID
-        );
-
-        AttestationRequestData memory requestData = AttestationRequestData({
-            recipient: callSigner,
-            expirationTime: 0,
-            revocable: revocable,
-            refUID: bytes32(0),
-            data: encodedData,
-            value: stakeAmount
-        });
-
         DelegatedAttestationRequest
-            memory delegatedRequest = DelegatedAttestationRequest({
-                schema: registeredSchemaUID,
-                data: requestData,
-                signature: Signature(0, bytes32(0), bytes32(0)), // Placeholder
-                attester: callSigner
-            });
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
 
         // Generate the correct signature
         bytes32 structHash = _generateStructHash(delegatedRequest);
@@ -262,15 +250,443 @@ contract OlasHubTest is Test {
             bytes32(0),
             "RefUID not set correctly"
         );
+        vm.stopPrank();
+    }
+    function test_PublishByDifferentCaller() public payable {
+        // Publishing an article by a different caller
+        address callSigner = Carla;
+        address functionCaller = Bob;
+        uint256 callSignerPK = CarlaPK;
+        string memory userName = "Carla";
+        string memory userEmail = "Carla@olas.info";
+        string memory profileImageUrl = "http://example.com/carla.jpg";
+
+        vm.deal(callSigner, 100 ether);
+        vm.deal(functionCaller, 100 ether);
+
+        vm.startPrank(callSigner);
+        // Create a profile
+        _createProfile(callSigner, userName, userEmail, profileImageUrl);
+
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32[] memory citationUID = new bytes32[](0);
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+
+        vm.stopPrank();
+        vm.startPrank(functionCaller); // start the prank for the different caller
+
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+
+        // check the attestation from the OlasHub contract
         assertEq(
-            fetchedAttestation.data,
-            encodedData,
-            "Data not set correctly"
+            attestationUID,
+            olasHub.authorArticles(callSigner, 0),
+            "Attestation not stored correctly"
+        );
+        // check the attestation from the EAS contract
+        Attestation memory fetchedAttestation = eas.getAttestation(
+            attestationUID
+        );
+
+        assertEq(
+            fetchedAttestation.schema,
+            registeredSchemaUID,
+            "Schema not set correctly"
+        );
+        assertEq(
+            fetchedAttestation.recipient,
+            callSigner,
+            "Recipient not set correctly"
+        );
+        assertEq(
+            fetchedAttestation.revocable,
+            revocable,
+            "Revocable not set correctly"
+        );
+        assertEq(
+            fetchedAttestation.refUID,
+            bytes32(0),
+            "RefUID not set correctly"
         );
         vm.stopPrank();
     }
 
-    // HELPER FUNCTIONS
+    /*//////////////////////////////////////////////////////////////
+                               FAIL CASES
+    //////////////////////////////////////////////////////////////*/
+    function test_InvalidSigner() public {
+        // publishing an article with an invalid attester
+        address callSigner = Carla;
+        address invalidSigner = Bob;
+        uint256 callSignerPK = CarlaPK;
+
+        // Create a profile for the invalid signer
+        vm.startPrank(invalidSigner);
+        _createProfile(
+            invalidSigner,
+            "Bob",
+            "Bob@olas.info",
+            "http://example.com/Bob.jpg"
+        );
+        vm.stopPrank(); // stop the prank for the invalid signer
+
+        // Create a profile for the valid signer
+        vm.deal(callSigner, 100 ether);
+        vm.startPrank(callSigner);
+        _createProfile(
+            callSigner,
+            "Carla",
+            "Carla@olas.info",
+            "http://example.com/carla.jpg"
+        );
+
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32[] memory citationUID = new bytes32[](0);
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+
+        // InvalidSignature() selector
+        bytes4 INVALID_SIGNATURE = bytes4(keccak256("InvalidSignature()"));
+
+        // Attempt to publish with invalid signer than the one who signed the attestation
+        vm.expectRevert(INVALID_SIGNATURE);
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            invalidSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        vm.stopPrank();
+    }
+    function test_InvalidMarketType() public {
+        // publishing an article with an invalid market type
+        bytes32 typeOfMarket = keccak256("InvalidMarketTypeHash");
+
+        address callSigner = Carla;
+        uint256 callSignerPK = CarlaPK;
+        vm.deal(callSigner, 100 ether);
+        vm.startPrank(callSigner);
+        // Create a profile
+        _createProfile(
+            callSigner,
+            "Carla",
+            "Carla@olas.info",
+            "http://example.com/carla.jpg"
+        );
+
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 differentStakeAmount = 0.01 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32[] memory citationUID = new bytes32[](0);
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+
+        // Attempt to publish with invalid market type bytes32
+        vm.expectRevert("Invalid market type");
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        vm.stopPrank();
+    }
+    function test_InvalidStakeAmount() public {
+        address callSigner = Carla;
+        uint256 callSignerPK = CarlaPK;
+        vm.deal(callSigner, 100 ether);
+        vm.startPrank(callSigner);
+        // Create a profile
+        _createProfile(
+            callSigner,
+            "Carla",
+            "Carla@olas.info",
+            "http://example.com/carla.jpg"
+        );
+
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 differentStakeAmount = 0.01 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32[] memory citationUID = new bytes32[](0);
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+
+        // Attempt to publish with a different stake amount
+        vm.expectRevert("Invalid stake amount");
+        bytes32 attestationUID = olasHub.publish{value: differentStakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        vm.stopPrank();
+    }
+    function test_InvalidCitationUID() public {
+        // publishing an article with an invalid citation UID
+        address callSigner = Carla;
+        uint256 callSignerPK = CarlaPK;
+        string memory userName = "Carla";
+        string memory userEmail = "Carla@olas.info";
+        string memory profileImageUrl = "http://example.com/carla.jpg";
+
+        vm.deal(callSigner, 100 ether);
+        vm.startPrank(callSigner);
+        // Create a profile
+        _createProfile(callSigner, userName, userEmail, profileImageUrl);
+
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32 randomCitation = keccak256("random byte32");
+        bytes32[] memory citationUID = new bytes32[](1);
+        citationUID[0] = randomCitation;
+
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+        vm.expectRevert(RoyaltyResolver.InvalidCitationUID.selector);
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        vm.stopPrank();
+    }
+    function test_AttestationWithoutProfile() public {
+        address callSigner = Carla;
+        uint256 callSignerPK = CarlaPK;
+        vm.deal(callSigner, 100 ether);
+        vm.startPrank(callSigner);
+        // Article details
+        string memory title = "Sample Article";
+        bytes32 contentUrl = keccak256(
+            abi.encodePacked("http://example.com/content")
+        );
+        bytes32 mediaUrl = keccak256(
+            abi.encodePacked("http://example.com/media")
+        );
+        uint256 stakeAmount = 0.1 ether;
+        uint256 royaltyAmount = 0.001 ether;
+        bytes32[] memory citationUID = new bytes32[](0);
+        bytes32 typeOfMarket = NEWS_AND_OPINION;
+        bool revocable = false;
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = _generateDelegatedAttestationRequest(
+                callSigner,
+                title,
+                contentUrl,
+                mediaUrl,
+                stakeAmount,
+                royaltyAmount,
+                citationUID,
+                typeOfMarket,
+                revocable
+            );
+
+        // Generate the correct signature
+        bytes32 structHash = _generateStructHash(delegatedRequest);
+        bytes32 digest = _getTypedHash(structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(callSignerPK, digest);
+
+        _verifySignature(digest, Signature(v, r, s), callSigner);
+        delegatedRequest.signature = Signature(v, r, s);
+
+        // Attempt to publish article without creating a profile
+        vm.expectRevert("Profile does not exist");
+        bytes32 attestationUID = olasHub.publish{value: stakeAmount}(
+            Signature(v, r, s),
+            callSigner,
+            title,
+            contentUrl,
+            mediaUrl,
+            stakeAmount,
+            royaltyAmount,
+            typeOfMarket,
+            citationUID
+        );
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
     function registerSchema() public returns (bytes32) {
         string
             memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
@@ -336,5 +752,82 @@ contract OlasHubTest is Test {
         ) {
             revert("Invalid signature");
         }
+    }
+    function _createProfile(
+        address _user,
+        string memory userName,
+        string memory userEmail,
+        string memory profileImageUrl
+    ) public {
+        // Assert that the profile does not exist before creation
+        assertFalse(
+            olasHub.hasProfile(_user),
+            "Profile should not exist before creation"
+        );
+
+        olasHub.createProfile(userName, userEmail, profileImageUrl);
+        // Assert that the profile exists after creation
+        assertTrue(
+            olasHub.hasProfile(_user),
+            "Profile should exist after creation"
+        );
+
+        (
+            uint256 profileId,
+            string memory retrievedUserName,
+            address userAddress,
+            string memory retrievedUserEmail,
+            string memory retrievedProfileImageUrl
+        ) = olasHub.profiles(_user);
+
+        // Assert Profile struct data
+        assertEq(retrievedUserName, userName, "User name should match");
+        assertEq(retrievedUserEmail, userEmail, "User email should match");
+        assertEq(
+            retrievedProfileImageUrl,
+            profileImageUrl,
+            "Profile image URL should match"
+        );
+    }
+    function _generateDelegatedAttestationRequest(
+        address _user,
+        string memory _title,
+        bytes32 _contentUrl,
+        bytes32 _mediaUrl,
+        uint256 _stakeAmount,
+        uint256 _royaltyAmount,
+        bytes32[] memory _citationUID,
+        bytes32 _typeOfMarket,
+        bool _revocable
+    ) public returns (DelegatedAttestationRequest memory) {
+        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
+        bytes memory encodedData = abi.encode(
+            _user,
+            _title,
+            _contentUrl,
+            _mediaUrl,
+            _stakeAmount,
+            _royaltyAmount,
+            _typeOfMarket,
+            _citationUID
+        );
+
+        AttestationRequestData memory requestData = AttestationRequestData({
+            recipient: _user,
+            expirationTime: 0,
+            revocable: _revocable,
+            refUID: bytes32(0),
+            data: encodedData,
+            value: _stakeAmount
+        });
+
+        DelegatedAttestationRequest
+            memory delegatedRequest = DelegatedAttestationRequest({
+                schema: registeredSchemaUID,
+                data: requestData,
+                signature: Signature(0, bytes32(0), bytes32(0)), // Placeholder
+                attester: _user
+            });
+        return delegatedRequest;
     }
 }
