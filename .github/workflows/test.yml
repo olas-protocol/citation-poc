@@ -27,9 +27,9 @@ jobs:
         run: |
           forge --version
           forge build --sizes --via-ir
-        id: build
+        id: build 
 
       - name: Run Forge tests
         run: |
-          forge test -vvv --via-ir
+          forge test -vvv --via-ir --fork-url ${{ secrets.SEPOLIA_RPC_URL }}
         id: test

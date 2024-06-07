@@ -45,7 +45,7 @@ contract RoyaltyResolverTest is Test {
     }
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
+        // vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
         // deploy or fetch contracts
         eas = EAS(0xC2679fBD37d54388Ce493F1DB75320D236e1815e);
         authorStake = new AuthorStake();
