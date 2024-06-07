@@ -1,4 +1,4 @@
-// source .env & forge test --match-path test/OlasHub.t.sol -vvvv --via-ir
+// source .env & forge test --match-path test/OlasHub.t.sol -vvvv --via-ir --fork-url $SEPOLIA_RPC_URL
 // SPDX-License-Identifier: UNLICENSED
 // solhint-disable func-name-mixedcase, var-name-mixedcase
 pragma solidity ^0.8.19;
@@ -79,7 +79,6 @@ contract OlasHubTest is Test {
     );
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
         // deploy or fetch contracts
         (Alice, AlicePK) = makeAddrAndKey("Alice");
         (Bob, BobPK) = makeAddrAndKey("Bob");

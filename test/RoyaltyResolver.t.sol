@@ -1,4 +1,4 @@
-// source .env & forge test --match-path test/RoyaltyResolver.t.sol -vvvv --via-ir
+// source .env & forge test --match-path test/RoyaltyResolver.t.sol -vvvv --via-ir --fork-url $SEPOLIA_RPC_URL
 // SPDX-License-Identifier: UNLICENSED
 // solhint-disable func-name-mixedcase, var-name-mixedcase
 pragma solidity ^0.8.19;
@@ -45,7 +45,6 @@ contract RoyaltyResolverTest is Test {
     }
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
         // deploy or fetch contracts
         eas = EAS(0xC2679fBD37d54388Ce493F1DB75320D236e1815e);
         authorStake = new AuthorStake();
