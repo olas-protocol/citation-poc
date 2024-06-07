@@ -14,17 +14,6 @@ contract OlasHub {
         string profileImageUrl;
     }
 
-    struct OlasArticleSchema {
-        address user;
-        string title;
-        bytes32 contentUrl;
-        bytes32 mediaUrl;
-        uint256 stakeAmount;
-        uint256 royaltyAmount;
-        bytes32 typeOfMarket;
-        bytes32[] citationUID;
-    }
-
     // Event definitions
     event ProfileCreated(
         uint256 indexed profileId,
