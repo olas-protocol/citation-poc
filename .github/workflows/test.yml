@@ -2,9 +2,9 @@ name: test
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
 
 jobs:
   check:
@@ -31,5 +31,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv --via-ir
+          forge test -vvv --via-ir --fork-url ${{ secrets.SEPOLIA_RPC_URL }}
         id: test

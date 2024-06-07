@@ -79,7 +79,7 @@ contract OlasHubTest is Test {
     );
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
+        // vm.createSelectFork(vm.rpcUrl(vm.envString("SEPOLIA_RPC_URL")));
         // deploy or fetch contracts
         (Alice, AlicePK) = makeAddrAndKey("Alice");
         (Bob, BobPK) = makeAddrAndKey("Bob");
