@@ -3,9 +3,14 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_EAS_CONTRACT",
+        "name": "_EAS_ADDRESS",
         "type": "address",
-        "internalType": "contract IEAS"
+        "internalType": "address"
+      },
+      {
+        "name": "_REGISTERED_SCHEMA_UID",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "nonpayable"
@@ -18,66 +23,63 @@
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IEAS"
+        "internalType": "contract IEAS_V026"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "attestArticle",
+    "name": "INVESTIGATIVE_JOURNALISM_AND_SCIENTIFIC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "NEWS_AND_OPINION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REGISTERED_SCHEMA_UID",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "authorArticles",
     "inputs": [
       {
-        "name": "signature",
-        "type": "tuple",
-        "internalType": "struct Signature",
-        "components": [
-          {
-            "name": "v",
-            "type": "uint8",
-            "internalType": "uint8"
-          },
-          {
-            "name": "r",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "s",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "contentUrl",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "mediaUrl",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "stakeAmount",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "royaltyAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "citationUIDs",
-        "type": "bytes32[]",
-        "internalType": "bytes32[]"
       }
     ],
     "outputs": [
@@ -87,7 +89,7 @@
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "payable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -179,18 +181,89 @@
         "name": "profileImageUrl",
         "type": "string",
         "internalType": "string"
-      },
-      {
-        "name": "profileCreationTimestamp",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "publish",
+    "inputs": [
+      {
+        "name": "_signature",
+        "type": "tuple",
+        "internalType": "struct Signature",
+        "components": [
+          {
+            "name": "v",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "r",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "s",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      },
+      {
+        "name": "_author",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_contentUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_mediaUrl",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_stakeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_royaltyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_typeOfMarket",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_citationUID",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
     "type": "event",
-    "name": "AttestationCreated",
+    "name": "ArticlePublished",
     "inputs": [
       {
         "name": "attestationUID",
