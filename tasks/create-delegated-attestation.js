@@ -56,7 +56,7 @@ task("create-delegated-attestation", "Creates an attestation")
         const typeOfMarket = NEWS_AND_OPINION;
         const citationUID = ["0x89e20a1a67336e4fffbb3cd26e229a82e9c6b6619ed2485b69a7a6444861249b"
         ];
-        const stakeAmount = ethers.parseEther("0.0");
+        const stakeAmount = ethers.parseEther("0.0001");
         const recipient = signer.address;
         const attester = signer.address;
         const expirationTime = 0n;
