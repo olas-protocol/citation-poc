@@ -53,7 +53,7 @@ contract OlasHubTest is Test {
     struct OlasArticleSchema {
         address user;
         string title;
-        bytes32 contentUrl;
+        string contentUrl;
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
@@ -177,7 +177,7 @@ contract OlasHubTest is Test {
         // Article details
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -272,7 +272,7 @@ contract OlasHubTest is Test {
         // Article details
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -382,7 +382,7 @@ contract OlasHubTest is Test {
         // Article details
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -446,7 +446,7 @@ contract OlasHubTest is Test {
         // publishing an article with an invalid market type
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -510,7 +510,7 @@ contract OlasHubTest is Test {
         // Article details
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -577,7 +577,7 @@ contract OlasHubTest is Test {
         invalidCitationUIDArray[0] = randomCitation;
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -629,7 +629,7 @@ contract OlasHubTest is Test {
         // Article details
         (
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -679,7 +679,7 @@ contract OlasHubTest is Test {
     //////////////////////////////////////////////////////////////*/
     function registerSchema() private returns (bytes32) {
         string
-            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
+            memory schema = "address user string title string contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID";
 
         bool revocable = false;
         bytes32 schemaUID = schemaRegistry.register(
@@ -781,7 +781,7 @@ contract OlasHubTest is Test {
     function _generateDelegatedAttestationRequest(
         address _user,
         string memory _title,
-        bytes32 _contentUrl,
+        string memory _contentUrl,
         bytes32 _mediaUrl,
         uint256 _stakeAmount,
         uint256 _royaltyAmount,
@@ -789,7 +789,7 @@ contract OlasHubTest is Test {
         bytes32 _typeOfMarket,
         bool _revocable
     ) private view returns (DelegatedAttestationRequest memory) {
-        // address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
+        // address user string title string contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount bytes32 typeOfMarket bytes32[] citationUID
         bytes memory encodedData = abi.encode(
             _user,
             _title,
@@ -840,7 +840,7 @@ contract OlasHubTest is Test {
         pure
         returns (
             string memory,
-            bytes32,
+            string memory,
             bytes32,
             uint256,
             uint256,
@@ -850,9 +850,7 @@ contract OlasHubTest is Test {
         )
     {
         string memory title = "Sample Article";
-        bytes32 contentUrl = keccak256(
-            abi.encodePacked("http://example.com/content")
-        );
+        string memory contentUrl = "http://example.com/content";
         bytes32 mediaUrl = keccak256(
             abi.encodePacked("http://example.com/media")
         );

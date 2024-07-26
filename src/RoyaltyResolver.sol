@@ -14,7 +14,7 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
     struct OlasArticleSchema {
         address user;
         string title;
-        bytes32 contentUrl;
+        string contentUrl;
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
@@ -57,7 +57,7 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
         (
             address user,
             string memory title,
-            bytes32 contentUrl,
+            string memory contentUrl,
             bytes32 mediaUrl,
             uint256 stakeAmount,
             uint256 royaltyAmount,
@@ -68,7 +68,7 @@ contract RoyaltyResolver is SchemaResolver, ReentrancyGuard {
                 (
                     address,
                     string,
-                    bytes32,
+                    string,
                     bytes32,
                     uint256,
                     uint256,

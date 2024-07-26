@@ -17,7 +17,7 @@ contract OlasHub {
     struct OlasArticleSchema {
         address user;
         string title;
-        bytes32 contentUrl;
+        string contentUrl;
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
@@ -97,7 +97,7 @@ contract OlasHub {
         Signature memory _signature,
         address _author,
         string memory _title,
-        bytes32 _contentUrl,
+        string memory _contentUrl,
         bytes32 _mediaUrl,
         uint256 _stakeAmount,
         uint256 _royaltyAmount,

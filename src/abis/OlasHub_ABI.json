@@ -223,8 +223,8 @@
       },
       {
         "name": "_contentUrl",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "string",
+        "internalType": "string"
       },
       {
         "name": "_mediaUrl",
