@@ -81,8 +81,8 @@ forge verify-contract <contract-address> <contract-location> --constructor-args 
 Here are the addresses of the deployed contracts along with their Etherscan links:
 
 - **Author Stake:** [0x02F4AC89cBeEa72804a6F2c698F642f156D82E7E](https://sepolia.etherscan.io/address/0x02F4AC89cBeEa72804a6F2c698F642f156D82E7E)
-- **Royalty Resolver:** [0xe201527cAd12e2a6869A3eEd83415B9eCBDd0AC5](https://sepolia.etherscan.io/address/0xe201527cAd12e2a6869A3eEd83415B9eCBDd0AC5)
-- **Olas Hub:** [0x079725B2D866bC50dE82ff03Ef5502Fc3C5EF349](https://sepolia.etherscan.io/address/0x079725B2D866bC50dE82ff03Ef5502Fc3C5EF349)
+- **Royalty Resolver:** [0x4A829910Bb5aaEe98427765f018799711b6a245b](https://sepolia.etherscan.io/address/0x4A829910Bb5aaEe98427765f018799711b6a245b)
+- **Olas Hub:** [0xa206587dEA5b768067ece5b68DBbB312A21010F2](https://sepolia.etherscan.io/address/0xa206587dEA5b768067ece5b68DBbB312A21010F2)
 
 
 ## Hardhat

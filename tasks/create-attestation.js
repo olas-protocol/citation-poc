@@ -33,18 +33,6 @@ task("create-attestation", "Creates an attestation")
         const schemaEncoder = new SchemaEncoder(fetchedSchema.schema);
         // NOTE: CHANGE DATA HERE
         // custom attestation data
-        const dataToAttest = [
-            {
-                name: "citationUID", value: [
-                    ethers.encodeBytes32String("exampleUID1"),
-                    ethers.encodeBytes32String("exampleUID2")
-                ], type: "bytes32[]"
-            },
-            { name: "authorName", value: "OBob", type: "bytes32" },
-            { name: "articleTitle", value: 'Why GM is new hello?!!', type: "string" },
-            { name: "articleHash", value: 'random hash!!', type: "bytes32" },
-            { name: "urlOfContent", value: "our-url-1", type: "string" }
-        ]
 
         // main schema details
         // NOTE: CHANGE DATA HERE
@@ -52,6 +40,25 @@ task("create-attestation", "Creates an attestation")
         const expirationTime = 0;
         const revocable = false;
         const stakeAmount = ethers.parseEther("0.0001");
+
+        const NEWS_AND_OPINION = ethers.keccak256(ethers.toUtf8Bytes("NewsAndOpinion"));
+
+        const dataToAttest =
+            [
+                { name: "user", value: signer.address, type: "address" },
+                { name: "title", value: 'title', type: "string" },
+                { name: "contentUrl", value: 'contentUrl', type: "string" },
+                { name: "mediaUrl", value: ethers.encodeBytes32String('mediaUrl'), type: "bytes32" },
+                { name: "stakeAmount", value: stakeAmount, type: "uint256" },
+                { name: "royaltyAmount", value: 0n, type: "uint256" },
+                { name: "typeOfMarket", value: NEWS_AND_OPINION, type: "bytes32" },
+                {
+                    name: "citationUID", value: [
+                        ethers.encodeBytes32String("exampleUID1"),
+                        ethers.encodeBytes32String("exampleUID2")
+                    ], type: "bytes32[]"
+                }
+            ]
         // dataToAttest format should match with the schema UID's schema, otherwise encoding will fail
         const encodedData = schemaEncoder.encodeData(dataToAttest);
 

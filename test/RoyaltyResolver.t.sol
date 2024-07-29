@@ -36,7 +36,7 @@ contract RoyaltyResolverTest is Test {
     struct OlasArticleSchema {
         address user;
         string title;
-        bytes32 contentUrl;
+        string contentUrl;
         bytes32 mediaUrl;
         uint256 stakeAmount;
         uint256 royaltyAmount;
@@ -76,7 +76,7 @@ contract RoyaltyResolverTest is Test {
         OlasArticleSchema memory olasArticleSchema = OlasArticleSchema({
             user: Alice,
             title: "Example Article",
-            contentUrl: bytes32("content"),
+            contentUrl: "content",
             mediaUrl: bytes32("media"),
             stakeAmount: 1 ether,
             royaltyAmount: 0,
@@ -100,7 +100,7 @@ contract RoyaltyResolverTest is Test {
         OlasArticleSchema memory olasArticleSchema = OlasArticleSchema({
             user: Alice,
             title: "Example Article",
-            contentUrl: bytes32("content"),
+            contentUrl: "content",
             mediaUrl: bytes32("media"),
             stakeAmount: 0,
             royaltyAmount: 0,
@@ -127,7 +127,7 @@ contract RoyaltyResolverTest is Test {
         OlasArticleSchema memory olasArticleSchema = OlasArticleSchema({
             user: Alice,
             title: "Example Article",
-            contentUrl: bytes32("content"),
+            contentUrl: "content",
             mediaUrl: bytes32("media"),
             stakeAmount: stakeValue,
             royaltyAmount: 0,
@@ -220,7 +220,7 @@ contract RoyaltyResolverTest is Test {
     //// helper functions
     function registerSchema() public {
         string
-            memory schema = "address user string title bytes32 contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID";
+            memory schema = "address user string title string contentUrl bytes32 mediaUrl uint256 stakeAmount uint256 royaltyAmount MarketType typeOfMarket bytes32[] citationUID";
 
         bool revocable = false;
         bytes32 schemaUID = schemaRegistry.register(
@@ -324,7 +324,7 @@ contract RoyaltyResolverTest is Test {
         OlasArticleSchema memory olasArticleSchema = OlasArticleSchema({
             user: attesterAddress,
             title: "Example Article",
-            contentUrl: bytes32("content"),
+            contentUrl: "content",
             mediaUrl: bytes32("media"),
             stakeAmount: stakeValue,
             royaltyAmount: 0,
@@ -393,7 +393,7 @@ contract RoyaltyResolverTest is Test {
         OlasArticleSchema memory olasArticleSchema = OlasArticleSchema({
             user: attesterAddress,
             title: "Example Article",
-            contentUrl: bytes32("content"),
+            contentUrl: "content",
             mediaUrl: bytes32("media"),
             stakeAmount: stakeValue,
             royaltyAmount: 0,

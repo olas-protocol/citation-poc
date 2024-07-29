@@ -51,7 +51,7 @@ task("create-delegated-attestation", "Creates an attestation")
         const schemaEncoder = new SchemaEncoder(fetchedSchema.schema);
         //  --------------------- NOTE: CHANGE DATA HERE ---------------------
         const title = "Why GM is new hello?!!";
-        const contentUrl = ethers.encodeBytes32String("random content url");
+        const contentUrl = "random content url"
         const mediaUrl = ethers.encodeBytes32String("random media url");
         const typeOfMarket = NEWS_AND_OPINION;
         const citationUID = ["0x89e20a1a67336e4fffbb3cd26e229a82e9c6b6619ed2485b69a7a6444861249b"
@@ -67,7 +67,7 @@ task("create-delegated-attestation", "Creates an attestation")
         const dataToAttest = [
             { name: "user", value: signer.address, type: "address" },
             { name: "title", value: title, type: "string" },
-            { name: "contentUrl", value: contentUrl, type: "bytes32" },
+            { name: "contentUrl", value: contentUrl, type: "string" },
             { name: "mediaUrl", value: mediaUrl, type: "bytes32" },
             { name: "stakeAmount", value: stakeAmount, type: "uint256" },
             { name: "royaltyAmount", value: royaltyAmount, type: "uint256" },

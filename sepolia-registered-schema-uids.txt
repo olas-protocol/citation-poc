@@ -1,1 +1,2 @@
 address user, string title, bytes32 contentUrl, bytes32 mediaUrl, uint256 stakeAmount, uint256 royaltyAmount, bytes32 typeOfMarket, bytes32[] citationUID 0xf4ea9ac884bca53c4831e8f598bd20ac6f0e57a5572a032f34b1bcf66bc82ba2
+address user, string title, string contentUrl, bytes32 mediaUrl, uint256 stakeAmount, uint256 royaltyAmount, bytes32 typeOfMarket, bytes32[] citationUID 0xd7e3a518ebd66c24ea19eeb89855d06581bb975920cd8c7ef080b4deffda99aa
